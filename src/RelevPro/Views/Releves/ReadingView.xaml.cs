@@ -39,10 +39,12 @@ public partial class ReadingView : UserControl
     private static DataTemplate CellTemplate(int i)
     {
         var grid = new FrameworkElementFactory(typeof(Grid));
+        grid.SetBinding(Panel.BackgroundProperty, new Binding($"Cells[{i}].Background"));
 
         var box = new FrameworkElementFactory(typeof(TextBox));
         box.SetBinding(TextBox.TextProperty, new Binding($"Cells[{i}].Text") { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.LostFocus });
         box.SetBinding(UIElement.VisibilityProperty, new Binding($"Cells[{i}].BoxVisibility"));
+        box.SetBinding(Control.BackgroundProperty, new Binding($"Cells[{i}].BoxBackground"));
         box.SetValue(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Right);
         box.SetValue(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center);
         box.SetValue(FrameworkElement.MarginProperty, new Thickness(2));

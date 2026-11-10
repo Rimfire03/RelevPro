@@ -7,14 +7,50 @@ namespace RelevPro.Core.Services;
 /// <summary>Consommations par mois et par an des compteurs cumulatifs d'une vue (voir <see cref="Consumption"/>).</summary>
 public static class ConsumptionService
 {
-    /// <summary>Consommation d'une période : relevé du début de la période suivante moins premier relevé de la période
-    /// (règle des relevés papier : on relève en début de période). Période en cours : dernier relevé moins premier.</summary>
-    public static decimal? Consumption(IReadOnlyList<MeterReading> ordered, DateTime start, DateTime endExclusive)
+    /// <summary>Capacité du compteur (valeur avant retour à 0) : celle du compteur si elle est renseignée, sinon la puissance
+    /// de 10 juste au-dessus du plus grand relevé (99 994 donne 100 000).</summary>
+    public static decimal Capacity(Meter? meter, IReadOnlyList<MeterReading> readings)
     {
-        var first = ordered.FirstOrDefault(r => r.Date >= start && r.Date < endExclusive);
-        if (first is null) return null;
-        var end = ordered.FirstOrDefault(r => r.Date >= endExclusive) ?? ordered.Last(r => r.Date < endExclusive);
-        return ReferenceEquals(end, first) ? null : end.Value - first.Value;
+        if (meter is { Capacite: > 0 }) return meter.Capacite;
+        if (readings.Count == 0) return 0;
+        var max = readings.Max(r => r.Value);
+        return max <= 0 ? 0 : (decimal)Math.Pow(10, Math.Floor(Math.Log10((double)max)) + 1);
+    }
+
+    /// <summary>Consommation d'une période : du premier relevé de la période jusqu'au premier relevé de la période suivante
+    /// (règle des relevés papier : on relève en début de période ; période en cours : jusqu'au dernier relevé). Un relevé « avec tour » compte (capacité - ancienne valeur + nouvelle valeur),
+    /// un relevé « compteur changé » compte sa valeur (le nouveau compteur part de 0) ; toute autre baisse d'index compte 0, jamais une consommation négative.</summary>
+    public static decimal? Consumption(IReadOnlyList<MeterReading> ordered, DateTime start, DateTime endExclusive, decimal capacity = 0)
+    {
+        var i0 = -1;
+        for (var i = 0; i < ordered.Count; i++) if (ordered[i].Date >= start && ordered[i].Date < endExclusive) { i0 = i; break; }
+        if (i0 < 0) return null;
+        var iEnd = i0;
+        for (var i = i0 + 1; i < ordered.Count; i++)
+        {
+            iEnd = i;
+            if (ordered[i].Date >= endExclusive) break;
+        }
+        if (iEnd == i0) return null;
+        // Entre deux changements (tour, compteur changé), consommation = dernier - premier de chaque tronçon : une valeur
+        // isolée aberrante au milieu n'a aucun effet, et un tronçon ne peut pas être négatif.
+        decimal total = 0, segStart = ordered[i0].Value;
+        for (var i = i0 + 1; i <= iEnd; i++)
+        {
+            var r = ordered[i];
+            if (r.Tour && capacity > 0)
+            {
+                total += Math.Max(0, ordered[i - 1].Value - segStart) + (capacity - ordered[i - 1].Value + r.Value);
+                segStart = r.Value;
+            }
+            else if (r.Remplacement)
+            {
+                total += Math.Max(0, ordered[i - 1].Value - segStart) + r.Value; // le nouveau compteur part de 0
+                segStart = r.Value;
+            }
+        }
+        total += Math.Max(0, ordered[iEnd].Value - segStart);
+        return total;
     }
 
     public sealed record Row(string Compteur, string Unite, decimal?[] Values, decimal? Total);
@@ -45,7 +81,8 @@ public static class ConsumptionService
         return meters.Select(m =>
         {
             var ordered = readings[m.Id].ToList();
-            var values = periods.Select(p => Consumption(ordered, p.Start, p.End)).ToArray();
+            var cap = Capacity(m, ordered);
+            var values = periods.Select(p => Consumption(ordered, p.Start, p.End, cap)).ToArray();
             decimal? sum = total && values.Any(v => v is not null) ? values.Sum(v => v ?? 0) : null;
             return new Row(m.Nom, m.Unite, values, sum);
         }).ToList();

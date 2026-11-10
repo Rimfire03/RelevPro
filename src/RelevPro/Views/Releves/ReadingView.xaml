@@ -18,7 +18,9 @@
                         <Button Content="Aujourd'hui" Style="{StaticResource SecondaryButton}" Command="{Binding TodayCommand}" Margin="0,0,24,0"/>
                         <Button Content="+ Compteur" Style="{StaticResource PrimaryButton}" Command="{Binding AddMeterLineCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="+ Tâche" Style="{StaticResource PrimaryButton}" Command="{Binding AddTaskLineCommand}" Margin="0,0,24,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
-                        <Button Content="{Binding EditModeButtonLabel}" Command="{Binding ToggleEditModeCommand}" Style="{StaticResource EditModeButtonStyle}" Padding="12,5"/>
+                        <Button Content="{Binding EditModeButtonLabel}" Command="{Binding ToggleEditModeCommand}" Style="{StaticResource EditModeButtonStyle}" Padding="12,5" Margin="0,0,16,0"/>
+                        <CheckBox Content="Afficher les compteurs arrêtés" IsChecked="{Binding ShowStopped}" VerticalAlignment="Center"
+                                  Visibility="{Binding HasStopped, Converter={StaticResource BoolToVis}}"/>
                     </WrapPanel>
                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,8,0,0" Foreground="{StaticResource BrushPrimary}" TextWrapping="Wrap"/>
                     <!-- Colonnes de saisie (une par semaine / période) ajoutées dans ReadingView.xaml.cs, entre « Récurrence » et « Consommation ». -->
@@ -70,6 +72,15 @@
             <TabItem Header="Relevés">
                 <DockPanel Margin="0,12,0,0">
                     <DataGrid ItemsSource="{Binding Readings}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAlert}" Value="True">
+                                        <Setter Property="Background" Value="#FECACA"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Date" Binding="{Binding DateText}" Width="100"/>
                             <DataGridTextColumn Header="Compteur" Binding="{Binding Meter}" Width="*"/>

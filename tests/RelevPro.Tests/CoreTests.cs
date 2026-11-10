@@ -142,4 +142,50 @@ public class CoreTests
         }
         finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); try { File.Delete(path); } catch { } }
     }
+
+    [Fact]
+    public void Stopped_meter_raises_no_notification()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            var f = new DbContextFactory(path);
+            f.EnsureDatabaseUpToDate("test");
+            using var db = f.Create();
+            var meter = new Meter { Nom = "Ancien", Arrete = true };
+            var view = new ReadingView { Nom = "V" };
+            db.Meters.Add(meter); db.ReadingViews.Add(view); db.SaveChanges();
+            db.ViewLines.Add(new ViewLine { ReadingViewId = view.Id, MeterId = meter.Id, Recurrence = Recurrence.Hebdo, CreatedOn = new DateTime(2026, 1, 1) });
+            db.SaveChanges();
+            Assert.Empty(NotificationService.Build(db, new DateTime(2026, 11, 10)));
+            meter.Arrete = false; db.SaveChanges();
+            Assert.Contains(NotificationService.Build(db, new DateTime(2026, 11, 10)), x => x.Level == NotificationLevel.Late);
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); try { File.Delete(path); } catch { } }
+    }
+
+    [Fact]
+    public void Rollover_is_summed_with_capacity_and_other_drops_count_zero()
+    {
+        var rs = new[] { R("2026-01-05", 99000), R("2026-01-26", 99900), R("2026-02-02", 100), R("2026-03-02", 300) };
+        rs[2].Tour = true;
+        var cap = ConsumptionService.Capacity(null, rs); // 99 900 -> 100 000
+        Assert.Equal(100000, cap);
+        Assert.Equal(1100, ConsumptionService.Consumption(rs, new DateTime(2026, 1, 1), new DateTime(2026, 2, 1), cap)); // 900 + (100 000 - 99 900 + 100)
+        Assert.Equal(200, ConsumptionService.Consumption(rs, new DateTime(2026, 2, 1), new DateTime(2026, 3, 1), cap));
+        rs[2].Tour = false; // changement de compteur : pas de consommation négative
+        Assert.Equal(0, ConsumptionService.Consumption(rs, new DateTime(2026, 1, 1), new DateTime(2026, 2, 1), cap)); // baisse non qualifiée : jamais négative
+        rs[2].Remplacement = true; // compteur changé : le nouveau compteur part de 0
+        Assert.Equal(1000, ConsumptionService.Consumption(rs, new DateTime(2026, 1, 1), new DateTime(2026, 2, 1), cap)); // 900 + 100
+        var spike = new[] { R("2026-01-05", 1000), R("2026-01-12", 9), R("2026-01-19", 1100), R("2026-02-02", 1200) };
+        Assert.Equal(200, ConsumptionService.Consumption(spike, new DateTime(2026, 1, 1), new DateTime(2026, 2, 1))); // valeur isolée aberrante ignorée
+    }
+
+    [Fact]
+    public void Confirmed_rollover_is_not_flagged_by_validator()
+    {
+        var hist = new[] { R("2026-01-05", 99000), R("2026-01-12", 99400), R("2026-01-19", 99800) };
+        Assert.NotEmpty(ReadingValidator.Check(M, new DateTime(2026, 1, 26), 150, hist));
+        Assert.Empty(ReadingValidator.Check(new Meter { Nom = "X", SeuilEcartPct = 200 }, new DateTime(2026, 1, 26), 150, hist, 100000));
+    }
 }

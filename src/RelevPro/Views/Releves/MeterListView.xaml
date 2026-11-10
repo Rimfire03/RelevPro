@@ -18,6 +18,7 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Compteur" Binding="{Binding Nom}" Width="*"/>
                 <DataGridTextColumn Header="Famille" Binding="{Binding Famille}" Width="150"/>
+                <DataGridTextColumn Header="État" Binding="{Binding Etat}" Width="90"/>
                 <DataGridTextColumn Header="Unité" Binding="{Binding Unite}" Width="90"/>
                 <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="130"/>
                 <DataGridTextColumn Header="Seuil d'alarme" Binding="{Binding Seuil}" Width="120"/>

@@ -26,18 +26,30 @@ public partial class GridCell : ObservableObject
     public bool Editable { get; }
     public int? ReadingId { get; }
 
+    /// <summary>Case qui déclenche une notification (saisie en retard, ou valeur forcée récente) : fond rouge pastel.</summary>
+    public bool Alert { get; }
+    private static readonly System.Windows.Media.Brush AlertBrush = MakeAlertBrush();
+    private static System.Windows.Media.Brush MakeAlertBrush()
+    {
+        var b = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFE, 0xCA, 0xCA));
+        b.Freeze();
+        return b;
+    }
+    public System.Windows.Media.Brush? Background => Alert ? AlertBrush : null;
+    public System.Windows.Media.Brush BoxBackground => Alert ? AlertBrush : System.Windows.Media.Brushes.White;
+
     [ObservableProperty] private string _text = string.Empty;
     [ObservableProperty] private bool _isDone;
 
-    public GridCell(LineRow row, Periods.Column column, DateTime periodStart, bool active, bool editable, int? readingId)
+    public GridCell(LineRow row, Periods.Column column, DateTime periodStart, bool active, bool editable, int? readingId, bool alert = false)
     {
-        _row = row; Column = column; PeriodStart = periodStart; Active = active; Editable = editable; ReadingId = readingId;
+        _row = row; Column = column; PeriodStart = periodStart; Active = active; Editable = editable; ReadingId = readingId; Alert = alert;
     }
 
     public Visibility BoxVisibility => Editable && _row.IsMeter ? Visibility.Visible : Visibility.Collapsed;
     public Visibility CheckVisibility => Editable && _row.IsTask ? Visibility.Visible : Visibility.Collapsed;
     public Visibility BlankVisibility => Editable ? Visibility.Collapsed : Visibility.Visible;
-    public string Blank => Active ? string.Empty : "—";
+    public string Blank => !Active ? "—" : (!Editable && Text.Length > 0 ? Text : string.Empty); // case en lecture seule : valeur affichée
 
     partial void OnTextChanged(string value) => Defer(() => _row.Owner.SaveCell(this));
     partial void OnIsDoneChanged(bool value) => Defer(() => _row.Owner.ToggleTask(this, value));
@@ -64,6 +76,7 @@ public partial class LineRow : ObservableObject
     public string Title => Line.Titre;
     public bool IsMeter => Line.Kind == LineKind.Compteur;
     public bool IsTask => !IsMeter;
+    public bool IsStopped => Line.Meter?.Arrete ?? false;
     public string KindIcon => IsMeter ? "🔢" : "☑";
     public string RecurrenceName => Periods.Name(Line.Recurrence);
     public string Unit => Line.Meter?.Unite ?? string.Empty;
@@ -80,9 +93,10 @@ public sealed record ReadingRow(MeterReading Reading, string Meter, string Unit)
 {
     public string DateText => Reading.Date.ToString("dd/MM/yyyy");
     public string ValueText => Reading.Value.ToString("0.####", CultureInfo.GetCultureInfo("fr-FR"));
-    public string ForcedText => Reading.Forced ? "Forcé" : "";
+    public string ForcedText => Reading.Tour ? "Tour" : Reading.Remplacement ? "Compteur changé" : Reading.Forced ? "Forcé" : "";
     public string Anomaly => Reading.Anomaly;
     public string By => Reading.EnteredBy;
+    public bool IsAlert => Reading.Forced && Reading.Date >= DateTime.Today.AddDays(-NotificationService.AnomalyDays);
 }
 
 public partial class ReadingViewModel : EditableScreenViewModel
@@ -112,6 +126,10 @@ public partial class ReadingViewModel : EditableScreenViewModel
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty] private string _periodTitle = string.Empty;
     [ObservableProperty] private string _consumptionHeader = "Consommation";
+    [ObservableProperty] private bool _showStopped;
+    public bool HasStopped { get; private set; }
+
+    partial void OnShowStoppedChanged(bool value) => ReloadLines();
 
     public ReadingViewModel(MainViewModel main, int viewId)
     {
@@ -166,14 +184,20 @@ public partial class ReadingViewModel : EditableScreenViewModel
             .Where(l => l.ReadingViewId == _viewId).OrderBy(l => l.Ordre).ThenBy(l => l.Id).ToList();
         var meterIds = lines.Where(l => l.MeterId != null).Select(l => l.MeterId!.Value).Distinct().ToList();
         var readings = App.Db.MeterReadings.AsNoTracking().Where(r => meterIds.Contains(r.MeterId)).OrderBy(r => r.Date).ThenBy(r => r.Id).ToList().ToLookup(r => r.MeterId);
+        HasStopped = lines.Any(l => l.Meter?.Arrete ?? false);
+        OnPropertyChanged(nameof(HasStopped));
+        if (!ShowStopped) lines = lines.Where(l => !(l.Meter?.Arrete ?? false)).ToList();
         var lineIds = lines.Select(l => l.Id).ToList();
         var completions = App.Db.TaskCompletions.AsNoTracking().Where(t => lineIds.Contains(t.ViewLineId)).ToList();
 
         foreach (var l in lines)
         {
             var r = LineRec(l);
+            var stopped = l.Meter?.Arrete ?? false;
             var all = l.Kind == LineKind.Compteur ? readings[l.MeterId ?? 0].ToList() : new List<MeterReading>();
             var cells = new List<(Periods.Column Col, DateTime Lp, DateTime LpEnd, bool Active, bool Editable, MeterReading? Existing, bool Done)>();
+            var currentStart = Periods.Start(r, today);
+            var previousStart = Periods.Previous(r, currentStart);
             foreach (var c in cols)
             {
                 var active = Periods.IsActive(_rec, r, c.Start);
@@ -190,13 +214,14 @@ public partial class ReadingViewModel : EditableScreenViewModel
                     }
                     else done = completions.Any(t => t.ViewLineId == l.Id && t.PeriodStart.Date == lp);
                 }
-                cells.Add((c, lp, lpEnd, active, active && c.Start <= today, existing, done));
+                cells.Add((c, lp, lpEnd, active, active && c.Start <= today && !stopped, existing, done));
             }
 
             // statut de la ligne : en retard si une case échue (période de la ligne terminée) est vide
             var due = cells.Where(x => x.Active && x.Col.Start <= today).ToList();
             string status; Brush brush;
-            if (due.Count == 0) (status, brush) = ("—", None);
+            if (stopped) (status, brush) = ("Arrêté", None);
+            else if (due.Count == 0) (status, brush) = ("—", None);
             else
             {
                 var missing = due.Where(x => l.Kind == LineKind.Compteur ? x.Existing is null : !x.Done).ToList();
@@ -206,13 +231,17 @@ public partial class ReadingViewModel : EditableScreenViewModel
             }
 
             var cons = string.Empty;
-            if (l.Kind == LineKind.Compteur && l.Meter is { Cumulatif: true } m && ConsumptionService.Consumption(all, wStart, wEnd) is { } v)
+            if (l.Kind == LineKind.Compteur && l.Meter is { Cumulatif: true } m && ConsumptionService.Consumption(all, wStart, wEnd, ConsumptionService.Capacity(m, all)) is { } v)
                 cons = $"{v.ToString("#,0.##", Fr)} {m.Unite}".Trim();
 
             var row = new LineRow(this, l) { ConsumptionText = cons, StatusText = status, StatusBrush = brush };
             foreach (var x in cells)
             {
-                var cell = new GridCell(row, x.Col, x.Lp, x.Active, x.Editable, x.Existing?.Id)
+                // même règle que le centre de notifications : période précédente non saisie (en retard) ou valeur forcée récente
+                var missing = x.Active && !stopped && x.Lp == previousStart && l.CreatedOn.Date < currentStart
+                              && (l.Kind == LineKind.Compteur ? x.Existing is null : !x.Done);
+                var forced = x.Existing is { Forced: true } f && f.Date >= today.AddDays(-NotificationService.AnomalyDays) && !stopped;
+                var cell = new GridCell(row, x.Col, x.Lp, x.Active, x.Editable, x.Existing?.Id, missing || forced)
                 {
                     Text = x.Existing is null ? string.Empty : x.Existing.Value.ToString("0.####", Fr),
                     IsDone = x.Done
@@ -279,7 +308,27 @@ public partial class ReadingViewModel : EditableScreenViewModel
         if (existing is not null && existing.Value == value) { ReloadLines(); return; }
         // un relevé en retard est daté de la période de la case (jamais dans le futur)
         var date = existing?.Date.Date ?? Max(cell.Column.Start, Min(DateTime.Today, cell.Column.End.AddDays(-1)));
-        var anomalies = ReadingValidator.Check(meter, date, value, all.Where(r => r != existing));
+        // retour à une valeur proche de 0 : tour complet ou compteur changé ? La consommation en dépend, donc on demande toujours.
+        var tour = false; var replaced = false;
+        var others = all.Where(r => r != existing).ToList();
+        var prevR = others.Where(r => r.Date < date).OrderBy(r => r.Date).LastOrDefault();
+        var capacity = ConsumptionService.Capacity(meter, all);
+        if (meter.Cumulatif && prevR is not null && value < prevR.Value && value <= prevR.Value * 0.1m)
+        {
+            var likelyTour = capacity > 0 && prevR.Value >= capacity * 0.8m;
+            var head = $"{prevR.Value.ToString("0.####", Fr)} le {prevR.Date:dd/MM/yyyy}, puis {value.ToString("0.####", Fr)} : retour à une valeur proche de 0.\n" +
+                       (likelyTour ? "Le relevé précédent était proche de la capacité : probablement un TOUR complet.\n\n" : "Le relevé précédent était loin de la capacité : probablement un COMPTEUR CHANGÉ.\n\n");
+            tour = App.Dialogs.ShowConfirm($"Le compteur a-t-il fait un tour ? - {meter.Nom}",
+                head + $"Oui : tour complet (repassé à 0 après {capacity.ToString("0.####", Fr)}) ; consommation de l'écart : {(capacity - prevR.Value + value).ToString("0.####", Fr)} {meter.Unite}.\n" +
+                "Non : autre cause (compteur changé, erreur de saisie).\n\nLa capacité se règle dans « Compteurs » (par défaut : puissance de 10 au-dessus du plus grand relevé).");
+            if (!tour)
+            {
+                replaced = App.Dialogs.ShowConfirm($"Compteur changé ? - {meter.Nom}",
+                    head + $"Oui : le compteur a été remplacé ; consommation de l'écart : {value.ToString("0.####", Fr)} {meter.Unite} (le nouveau compteur part de 0).\n" +
+                    "Non : erreur de saisie, la valeur est signalée comme anomalie (vous pourrez la corriger ou la forcer).");
+            }
+        }
+        var anomalies = ReadingValidator.Check(meter, date, value, others, tour ? capacity : 0, replaced);
 
         var forced = false;
         if (anomalies.Count > 0)
@@ -299,6 +348,8 @@ public partial class ReadingViewModel : EditableScreenViewModel
             App.Db.MeterReadings.Add(existing);
         }
         existing.Value = value;
+        existing.Tour = tour;
+        existing.Remplacement = replaced;
         existing.Forced = forced;
         existing.Anomaly = forced ? string.Join(" ", anomalies) : string.Empty;
         existing.EnteredBy = Environment.UserName;
@@ -344,7 +395,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
     private void AddMeterLine()
     {
         if (!App.GuardWritable() || !GuardEdit()) return;
-        var meters = App.Db.Meters.AsNoTracking().OrderBy(m => m.Famille).ThenBy(m => m.Ordre).ThenBy(m => m.Nom).ToList();
+        var meters = App.Db.Meters.AsNoTracking().Where(m => !m.Arrete).OrderBy(m => m.Famille).ThenBy(m => m.Ordre).ThenBy(m => m.Nom).ToList();
         if (meters.Count == 0)
         {
             App.Dialogs.ShowMessage("Aucun compteur", "Créez d'abord un compteur dans le menu « Compteurs ».");

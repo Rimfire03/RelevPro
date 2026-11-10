@@ -41,6 +41,14 @@ public class Meter : ISiteScoped
     /// <summary>Vrai : index qui ne fait qu'augmenter (consommation calculée). Faux : mesure ou niveau (peut baisser,
     /// pas de consommation).</summary>
     public bool Cumulatif { get; set; } = true;
+
+    /// <summary>Compteur arrêté ou ignoré : plus de saisie ni de notification, l'historique reste consultable
+    /// (lignes masquées de la saisie sauf « Afficher les compteurs arrêtés »).</summary>
+    public bool Arrete { get; set; }
+
+    /// <summary>Valeur à laquelle le compteur repasse à 0 (ex. 100000 pour 5 chiffres). 0 = automatique : puissance de 10
+    /// juste au-dessus du plus grand relevé (voir <see cref="Services.ConsumptionService.Capacity"/>).</summary>
+    public decimal Capacite { get; set; }
 }
 
 /// <summary>Vue de relevé : un écran de saisie regroupant des lignes (compteurs ou tâches).</summary>
@@ -93,6 +101,14 @@ public class MeterReading : ISiteScoped
     public DateTime Date { get; set; }
     public decimal Value { get; set; }
     public bool Forced { get; set; }
+
+    /// <summary>Le compteur a fait un tour complet (retour à 0) depuis le relevé précédent : la consommation est
+    /// calculée avec la capacité du compteur, au lieu d'une baisse d'index.</summary>
+    public bool Tour { get; set; }
+
+    /// <summary>Le compteur a été remplacé depuis le relevé précédent (valeur proche de 0 sans tour) : la consommation de
+    /// l'écart est la nouvelle valeur (le nouveau compteur part de 0), jamais négative.</summary>
+    public bool Remplacement { get; set; }
     public string Anomaly { get; set; } = string.Empty;
     public string EnteredBy { get; set; } = string.Empty;
     public DateTime EnteredAt { get; set; } = DateTime.Now;

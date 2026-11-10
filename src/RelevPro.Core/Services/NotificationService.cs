@@ -32,7 +32,7 @@ public static class NotificationService
             .Select(t => (t.ViewLineId, t.PeriodStart.Date)).ToHashSet();
 
         var list = new List<AppNotification>();
-        foreach (var line in lines.Where(l => l.ReadingView is not null).OrderBy(l => l.ReadingView!.Ordre).ThenBy(l => l.Ordre))
+        foreach (var line in lines.Where(l => l.ReadingView is not null && !(l.Meter?.Arrete ?? false)).OrderBy(l => l.ReadingView!.Ordre).ThenBy(l => l.Ordre))
         {
             var current = Periods.Start(line.Recurrence, today);
             var previous = Periods.Previous(line.Recurrence, current);

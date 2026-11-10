@@ -95,6 +95,7 @@ public class RelevDbContext : DbContext
         modelBuilder.Entity<Meter>().Property(m => m.Famille).HasMaxLength(200);
         modelBuilder.Entity<CatalogItem>().Property(c => c.Nom).HasMaxLength(100);
         modelBuilder.Entity<Meter>().Property(m => m.SeuilHaut).HasPrecision(18, 4);
+        modelBuilder.Entity<Meter>().Property(m => m.Capacite).HasPrecision(18, 4);
         modelBuilder.Entity<ViewLine>().HasOne(l => l.ReadingView).WithMany(v => v.Lines).HasForeignKey(l => l.ReadingViewId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<ViewLine>().HasOne(l => l.Meter).WithMany().HasForeignKey(l => l.MeterId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<MeterReading>().HasOne(r => r.Meter).WithMany().HasForeignKey(r => r.MeterId).OnDelete(DeleteBehavior.Cascade);

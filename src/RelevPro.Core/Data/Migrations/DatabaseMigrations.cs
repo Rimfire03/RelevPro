@@ -13,7 +13,19 @@ internal static class DatabaseMigrations
         (1, "Schéma initial (compteurs, vues, relevés, tâches)", _ => { }),
         (2, "Vues : famille et récurrence", AddViewColumns),
         (3, "Catalogues (unités, familles) et famille des compteurs", AddCatalogs),
+        (4, "Compteurs arrêtés", AddStoppedFlag),
+        (5, "Tour et remplacement de compteur", AddRollover),
     };
+
+    private static void AddRollover(RelevDbContext db)
+    {
+        Add(db, "Meters", "Capacite", "TEXT NOT NULL DEFAULT '0'", "numeric(18,4) NOT NULL DEFAULT 0", "decimal(18,4) NOT NULL DEFAULT 0", "decimal(18,4) NOT NULL DEFAULT 0");
+        Add(db, "MeterReadings", "Tour", "INTEGER NOT NULL DEFAULT 0", "boolean NOT NULL DEFAULT false", "tinyint(1) NOT NULL DEFAULT 0", "bit NOT NULL DEFAULT 0");
+        Add(db, "MeterReadings", "Remplacement", "INTEGER NOT NULL DEFAULT 0", "boolean NOT NULL DEFAULT false", "tinyint(1) NOT NULL DEFAULT 0", "bit NOT NULL DEFAULT 0");
+    }
+
+    private static void AddStoppedFlag(RelevDbContext db) =>
+        Add(db, "Meters", "Arrete", "INTEGER NOT NULL DEFAULT 0", "boolean NOT NULL DEFAULT false", "tinyint(1) NOT NULL DEFAULT 0", "bit NOT NULL DEFAULT 0");
 
     /// <summary>Table CatalogItems (idempotente) et colonne Meters.Famille.</summary>
     private static void AddCatalogs(RelevDbContext db)
@@ -50,7 +62,8 @@ internal static class DatabaseMigrations
     private static void Add(RelevDbContext db, string table, string col, string sqlite, string pg, string maria, string mssql)
     {
         var p = db.Provider;
-        if (p != Services.DatabaseProvider.Sqlite && ServerSql.ColumnExists(db, table, col)) return;
+        var exists = p == Services.DatabaseProvider.Sqlite ? SchemaInspector.GetColumns(db, table).Contains(col) : ServerSql.ColumnExists(db, table, col);
+        if (exists) return;
         var (type, add) = p switch
         {
             Services.DatabaseProvider.Sqlite => (sqlite, "ADD COLUMN"),
@@ -68,6 +81,8 @@ internal static class DatabaseMigrations
     {
         (2, "Vues : famille et récurrence", AddViewColumns),
         (3, "Catalogues (unités, familles) et famille des compteurs", AddCatalogs),
+        (4, "Compteurs arrêtés", AddStoppedFlag),
+        (5, "Tour et remplacement de compteur", AddRollover),
     };
 
     internal static IReadOnlyList<(int Version, string Description, Action<RelevDbContext> Apply)> ServerPlan(int fromVersion)

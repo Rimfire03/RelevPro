@@ -14,6 +14,7 @@ public sealed record MeterRow(Meter Meter, int Views, int Readings)
     public string Nom => Meter.Nom;
     public string Unite => Meter.Unite;
     public string Famille => Meter.Famille;
+    public string Etat => Meter.Arrete ? "Arrêté" : "En service";
     public string Type => Meter.Cumulatif ? "Cumulatif" : "Mesure / niveau";
     public string Seuil => Meter.SeuilHaut > 0 ? $"Alarme > {Meter.SeuilHaut:0.##}" : "-";
     public string Usage => $"{Views} vue(s), {Readings} relevé(s)";
@@ -55,10 +56,12 @@ public partial class MeterListViewModel : EditableScreenViewModel
 
     private static bool Edit(string title, Meter m)
     {
-        var nom = m.Nom; var uniteList = Choices(CatalogKind.Unite, m.Unite); var unite = Math.Max(0, uniteList.IndexOf(m.Unite)); var famList = Choices(CatalogKind.Famille, m.Famille); var fam = Math.Max(0, famList.IndexOf(m.Famille)); var seuil = m.SeuilEcartPct; var haut = m.SeuilHaut; var type = m.Cumulatif ? 0 : 1;
+        var nom = m.Nom; var uniteList = Choices(CatalogKind.Unite, m.Unite); var unite = Math.Max(0, uniteList.IndexOf(m.Unite)); var famList = Choices(CatalogKind.Famille, m.Famille); var fam = Math.Max(0, famList.IndexOf(m.Famille)); var seuil = m.SeuilEcartPct; var haut = m.SeuilHaut; var etat = m.Arrete ? 1 : 0; var cap = m.Capacite; var type = m.Cumulatif ? 0 : 1;
         var ok = App.Dialogs.EditFields(title, new List<EditField>
         {
             EditField.Text("Nom du compteur", () => nom, v => nom = v, required: true),
+            EditField.ComboField("État", new List<string> { "En service", "Arrêté / ignoré (plus de saisie ni de notification, historique conservé)" }, () => etat, v => etat = v),
+            EditField.DecimalField("Capacité (valeur avant retour à 0, ex. 100000 ; 0 = automatique)", () => cap, v => cap = v),
             EditField.ComboField("Famille", famList, () => fam, v => fam = v),
             EditField.ComboField("Unité", uniteList, () => unite, v => unite = v),
             EditField.ComboField("Type", new List<string> { "Compteur cumulatif (index qui augmente, consommation calculée)", "Mesure ou niveau (peut baisser, pas de consommation)" }, () => type, v => type = v),
@@ -66,7 +69,7 @@ public partial class MeterListViewModel : EditableScreenViewModel
             EditField.IntField("Écart toléré (% au-dessus de l'habituel avant alerte)", () => seuil, v => seuil = v)
         });
         if (!ok || string.IsNullOrWhiteSpace(nom)) return false;
-        m.Nom = nom.Trim(); m.Unite = unite <= 0 ? "" : uniteList[unite]; m.Famille = fam <= 0 ? "" : famList[fam]; m.SeuilEcartPct = Math.Max(0, seuil); m.SeuilHaut = Math.Max(0, haut); m.Cumulatif = type == 0;
+        m.Nom = nom.Trim(); m.Unite = unite <= 0 ? "" : uniteList[unite]; m.Famille = fam <= 0 ? "" : famList[fam]; m.SeuilEcartPct = Math.Max(0, seuil); m.SeuilHaut = Math.Max(0, haut); m.Cumulatif = type == 0; m.Arrete = etat == 1; m.Capacite = Math.Max(0, cap);
         return true;
     }
 
