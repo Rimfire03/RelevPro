@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Paquet MSI de RelevPro (WiX 4, par machine, 64 bits). Construit par tools\Release.ps1 :
+     wix build installer\Product.wxs -d Version=x.y.z -d PublishDir=<dossier publish> -d IconPath=<app.ico> -->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package Name="RelevPro" Manufacturer="TomLine prod&amp;co" Version="$(Version)"
+           UpgradeCode="2AD05A13-F784-43AE-A481-25BC86E0E664" Scope="perMachine" Language="1036" Codepage="1252">
+
+    <MajorUpgrade AllowDowngrades="yes" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <Icon Id="app.ico" SourceFile="$(IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="app.ico" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="RelevPro">
+
+        <Component Id="MainExe" Guid="*">
+          <File Id="RelevProExe" Source="$(PublishDir)\RelevPro.exe" KeyPath="yes">
+            <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="RelevPro"
+                      WorkingDirectory="INSTALLFOLDER" Advertise="no" />
+          </File>
+        </Component>
+
+        <!-- Les données (base, réglages, exports) vivent dans RelevData, à côté de l'exécutable : le dossier
+             doit rester inscriptible pour les utilisateurs standard. -->
+        <Directory Id="DATADIR" Name="RelevData">
+          <Component Id="DataFolder" Guid="B3A666BE-AE23-45AD-B70E-49836AD7B95A">
+            <CreateFolder>
+              <util:PermissionEx User="Users" GenericAll="yes" />
+            </CreateFolder>
+          </Component>
+          <Directory Id="LATODIR" Name="LatoFont" />
+        </Directory>
+
+        <!-- Clé de registre propre à l'application : InstallDir signale la version installée ; l'application y
+             écrit sa valeur de licence, d'où l'accès en écriture pour les utilisateurs standard. -->
+        <Component Id="AppRegistry" Guid="*" Bitness="always64">
+          <RegistryKey Root="HKLM" Key="SOFTWARE\TomLine\RelevPro" ForceCreateOnInstall="yes">
+            <RegistryValue Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+            <util:PermissionEx User="Users" GenericAll="yes" />
+          </RegistryKey>
+        </Component>
+
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="RelevPro" Level="1">
+      <ComponentRef Id="MainExe" />
+      <ComponentRef Id="DataFolder" />
+      <ComponentRef Id="AppRegistry" />
+      <ComponentGroupRef Id="DataFiles" />
+    </Feature>
+
+  </Package>
+
+</Wix>

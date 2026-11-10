@@ -1,0 +1,314 @@
+<Window x:Class="RelevPro.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:RelevPro.ViewModels"
+        xmlns:views="clr-namespace:RelevPro.Views"
+        xmlns:app="clr-namespace:RelevPro"
+        Title="RelevPro - Relevés de compteurs" Icon="/Assets/app.ico" Height="820" Width="1340"
+        WindowStartupLocation="CenterScreen">
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+    <DockPanel>
+        <!-- Pied de page -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource BrushSidebar}" Padding="16,8"
+                BorderThickness="0,1,0,0" BorderBrush="{StaticResource BrushSidebarBorder}">
+            <Grid>
+                <!-- Version de l'application et de la base, tout à droite. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Source={x:Static app:App.DisplayVersion}, StringFormat='Core v{0}'}" FontSize="11" Foreground="#64748B"/>
+                    <TextBlock Text="{Binding Source={x:Static app:App.DatabaseVersion}, StringFormat='DB: V{0}'}" FontSize="11" Foreground="#64748B" Margin="12,0,0,0"/>
+                    <TextBlock Text="{Binding Source={x:Static app:App.DatabaseModeLabel}, StringFormat='· {0}'}" FontSize="11" Foreground="#64748B" Margin="6,0,0,0"/>
+                    <!-- Puce d'état de la base : grise (vérification en cours), verte (accessible), rouge (connexion perdue). -->
+                    <Ellipse Width="9" Height="9" Margin="6,1,0,0" VerticalAlignment="Center"
+                             DataContext="{x:Static app:App.DatabaseHealth}" ToolTip="{Binding Tooltip}"
+                             ToolTipService.ShowDuration="20000">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#94A3B8"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsOk}" Value="True">
+                                        <Setter Property="Fill" Value="#16A34A"/>
+                                    </DataTrigger>
+                                    <!-- Accessible mais poste en lecture seule : orange. -->
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsOk}" Value="True"/>
+                                            <Condition Binding="{Binding IsReadOnlyMode}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Fill" Value="#F59E0B"/>
+                                    </MultiDataTrigger>
+                                    <DataTrigger Binding="{Binding IsDown}" Value="True">
+                                        <Setter Property="Fill" Value="#DC2626"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <!-- Cadenas d'accès : vert si la session Windows est autorisée en lecture/écriture, rouge sinon. -->
+                    <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="8,1,0,0" VerticalAlignment="Center"
+                               Visibility="{Binding Source={x:Static app:App.AccessEnabled}, Converter={StaticResource BoolToVis}}"
+                               Foreground="{Binding Source={x:Static app:App.AccessBrush}}"
+                               ToolTip="{Binding Source={x:Static app:App.AccessTooltip}}"/>
+                    <TextBlock Text="Connexion à la base perdue" FontSize="11" Foreground="#DC2626" FontWeight="SemiBold" Margin="6,0,0,0"
+                               DataContext="{x:Static app:App.DatabaseHealth}"
+                               Visibility="{Binding IsDown, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+                <TextBlock Text="© TomLine prod&amp;co by Thomas Guidez  ·  Relevés de compteurs" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center"/>
+                <!-- État de la licence, aligné à gauche (voir App.Licensing.cs / LicenseManager). -->
+                <TextBlock Text="{Binding LicenseFooter}" FontSize="11" Foreground="{Binding LicenseFooterBrush}" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Barre latérale moderne -->
+            <Border Grid.Column="0" Background="{StaticResource BrushSidebar}" BorderThickness="0,0,1,0" BorderBrush="{StaticResource BrushSidebarBorder}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="16,18,16,12">
+                        <!-- Logo de l'entreprise (Paramètres), sur fond blanc pour rester lisible sur la barre sombre -->
+                        <Border Background="White" CornerRadius="6" Padding="6" Margin="0,0,0,14" HorizontalAlignment="Left"
+                                Visibility="{Binding LogoImage, Converter={StaticResource NullToCollapsed}}">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#000000" Opacity="0.2" BlurRadius="8" Direction="270" ShadowDepth="2"/>
+                            </Border.Effect>
+                            <Image Source="{Binding LogoImage}" MaxHeight="55" MaxWidth="210" Stretch="Uniform"/>
+                        </Border>
+
+                        <!-- En-tête de l'application -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Background="#1E293B" CornerRadius="6" Padding="5" Margin="0,0,10,0">
+                                <Image Source="/Assets/app-logo-white.png" Width="22" Height="22" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="RelevPro" FontSize="18" FontWeight="Bold" Foreground="{StaticResource BrushTextOnDark}"/>
+                                <TextBlock Text="Relevés et tâches" FontSize="11" Foreground="#94A3B8" Margin="0,1,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Sélecteur de site (module MultiSite) : seulement si plusieurs sites existent et que le module est utilisable. -->
+                        <Border Background="#152138" CornerRadius="6" Padding="10,6" Margin="0,16,0,0"
+                                BorderBrush="{StaticResource BrushSidebarBorder}" BorderThickness="1"
+                                Visibility="{Binding ShowSiteSelector, Converter={StaticResource BoolToVis}}">
+                            <DockPanel LastChildFill="True">
+                                <TextBlock DockPanel.Dock="Left" Text="Site :" Foreground="#94A3B8" FontWeight="SemiBold"
+                                           VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12.5"/>
+                                <ComboBox ItemsSource="{Binding Sites}" SelectedItem="{Binding SelectedSite}" DisplayMemberPath="Nom"
+                                          Style="{StaticResource SidebarComboBoxStyle}"/>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Séparateur discret -->
+                    <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource BrushSidebarBorder}" Margin="16,4,16,12"/>
+
+                    <!-- "Aide" : à part du menu défilant ci-dessous, ancré tout en bas de la barre
+                         latérale pour rester toujours accessible sans avoir à faire défiler. -->
+                    <Border DockPanel.Dock="Bottom" Margin="6,8" CornerRadius="6" Cursor="Hand">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowHelpCommand}"/>
+                        </Border.InputBindings>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HelpItem.IsSelected}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource BrushSidebarSelected}"/>
+                                    </DataTrigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource BrushSidebarHover}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal" Margin="14,7">
+                            <TextBlock Text="{Binding HelpItem.Icon}" Margin="0,0,10,0" FontSize="14" VerticalAlignment="Center" Foreground="#CBD5E1"/>
+                            <TextBlock Text="{Binding HelpItem.Title}" FontSize="13" VerticalAlignment="Center" Foreground="#CBD5E1"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- "Paramètres" : juste au-dessus de "Aide" ci-dessus, même traitement (à part du menu
+                         défilant, toujours accessible). -->
+                    <Border DockPanel.Dock="Bottom" Margin="6,0,6,8" CornerRadius="6" Cursor="Hand">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowSettingsCommand}"/>
+                        </Border.InputBindings>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SettingsItem.IsSelected}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource BrushSidebarSelected}"/>
+                                    </DataTrigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource BrushSidebarHover}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal" Margin="14,7">
+                            <TextBlock Text="{Binding SettingsItem.Icon}" Margin="0,0,10,0" FontSize="14" VerticalAlignment="Center" Foreground="#CBD5E1"/>
+                            <TextBlock Text="{Binding SettingsItem.Title}" FontSize="13" VerticalAlignment="Center" Foreground="#CBD5E1"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- "Notifications" : juste au-dessus de "Paramètres" (déclaré après lui : les éléments ancrés en
+                         bas s'empilent vers le haut).  -->
+                    <Border DockPanel.Dock="Bottom" Margin="6,0,6,8" CornerRadius="6" Cursor="Hand">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowNotificationsPageCommand}"/>
+                        </Border.InputBindings>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding NotificationsItem.IsSelected}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource BrushSidebarSelected}"/>
+                                    </DataTrigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource BrushSidebarHover}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal" Margin="14,7">
+                            <TextBlock Text="{Binding NotificationsItem.Icon}" Margin="0,0,10,0" FontSize="14" VerticalAlignment="Center" Foreground="#CBD5E1"/>
+                            <TextBlock Text="{Binding NotificationsItem.Title}" FontSize="13" VerticalAlignment="Center" Foreground="#CBD5E1"/>
+                            <Border Background="#DC2626" CornerRadius="9" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding HasNotificationBadge, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding NotificationBadge}" FontSize="11" FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                    <!-- Séparateur entre le menu défilant (modules) et la section épinglée Paramètres/Aide ci-dessus. -->
+                    <Border DockPanel.Dock="Bottom" Height="1" Background="{StaticResource BrushSidebarBorder}" Margin="16,4,16,8"/>
+
+                    <!-- Menu de navigation -->
+                    <TreeView x:Name="NavigationTree" ItemsSource="{Binding NavigationItems}"
+                              Background="Transparent" BorderThickness="0" Margin="4,0"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              SelectedItemChanged="NavigationTree_SelectedItemChanged">
+                        <TreeView.Resources>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Foreground" Value="#CBD5E1"/>
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TreeViewItem">
+                                            <StackPanel Margin="0,1">
+                                                <!-- Simple ligne de séparation (NavigationItem.IsSeparator) : ni sélectionnable ni
+                                                     survolable, voir le DataTrigger tout en bas qui bascule l'affichage. -->
+                                                <Border x:Name="SeparatorLine" Height="1" Background="{StaticResource BrushSidebarBorder}" Margin="16,8" Visibility="Collapsed"/>
+                                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Margin="6,1" Padding="8,7">
+                                                    <DockPanel LastChildFill="True">
+                                                        <ToggleButton x:Name="Expander" DockPanel.Dock="Left" Width="22" Height="22"
+                                                                      Background="Transparent" BorderThickness="0"
+                                                                      IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                                                      Visibility="Collapsed" ClickMode="Press" Focusable="False" Margin="0,0,4,0">
+                                                            <ToggleButton.Template>
+                                                                <ControlTemplate TargetType="ToggleButton">
+                                                                    <Path x:Name="Arrow" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                          Data="M 2 1 L 6 5 L 2 9" Stroke="#94A3B8" StrokeThickness="1.5"/>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsChecked" Value="True">
+                                                                            <Setter TargetName="Arrow" Property="Data" Value="M 1 2 L 5 6 L 9 2"/>
+                                                                            <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource BrushTextOnDark}"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </ToggleButton.Template>
+                                                        </ToggleButton>
+                                                        <ContentPresenter ContentSource="Header" VerticalAlignment="Center"/>
+                                                    </DockPanel>
+                                                </Border>
+                                                <ItemsPresenter x:Name="ItemsHost" Visibility="Collapsed" Margin="14,1,0,2"/>
+                                            </StackPanel>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="HasItems" Value="True">
+                                                    <Setter TargetName="Expander" Property="Visibility" Value="Visible"/>
+                                                </Trigger>
+                                                <Trigger Property="IsExpanded" Value="True">
+                                                    <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible"/>
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BrushSidebarHover}"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BrushSidebarSelected}"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </Trigger>
+                                                <DataTrigger Binding="{Binding IsSeparator}" Value="True">
+                                                    <Setter TargetName="SeparatorLine" Property="Visibility" Value="Visible"/>
+                                                    <Setter TargetName="Bd" Property="Visibility" Value="Collapsed"/>
+                                                    <Setter Property="IsHitTestVisible" Value="False"/>
+                                                    <Setter Property="Focusable" Value="False"/>
+                                                </DataTrigger>
+                                                <!-- Module activé dans Paramètres mais non couvert par la licence active
+                                                     (voir NavigationItem.IsLicensed / MainViewModel.RefreshLicenseGating) :
+                                                     reste visible, grisé et non cliquable - jamais juste masqué. -->
+                                                <DataTrigger Binding="{Binding IsLicensed}" Value="False">
+                                                    <Setter Property="IsHitTestVisible" Value="False"/>
+                                                    <Setter Property="Focusable" Value="False"/>
+                                                    <Setter Property="Opacity" Value="0.4"/>
+                                                    <Setter TargetName="Bd" Property="ToolTip" Value="{Binding NotLicensedMessage}"/>
+                                                </DataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TreeView.Resources>
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <!-- Titre tronqué avec « … » (info-bulle : titre complet) plutôt que de faire apparaître
+                                     une barre de défilement horizontale quand un titre modifiable est long. -->
+                                <Grid Margin="6,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <!-- Pas d'icône devant le titre d'un menu dépliant (gain de place) : colonne vide masquée. -->
+                                    <TextBlock Grid.Column="0" Text="{Binding Icon}" Margin="0,0,10,0" FontSize="14" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <Trigger Property="Text" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="13" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/>
+                                </Grid>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </DockPanel>
+            </Border>
+
+            <!-- Zone de contenu principal -->
+            <DockPanel Grid.Column="1">
+                <!-- Bannière d'alerte en lecture seule -->
+                <Border DockPanel.Dock="Top" Background="#FFFBEB" BorderBrush="#FDE68A" BorderThickness="0,0,0,1" Padding="18,10"
+                        Visibility="{Binding Source={x:Static app:App.IsReadOnly}, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="⚠" FontSize="15" Foreground="#D97706" FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{x:Static app:App.ReadOnlyMessage}" TextWrapping="Wrap" Foreground="#92400E" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                <ContentControl Content="{Binding CurrentViewModel}" Background="{StaticResource BrushBackground}"/>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</Window>

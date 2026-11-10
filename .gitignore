@@ -1,0 +1,12 @@
+bin/
+obj/
+*.user
+.vs/
+src/FiltresApp/bin/**/settings.json
+src/FiltresApp/bin/**/data/filtres.db-shm
+src/FiltresApp/bin/**/data/filtres.db-wal
+filtres.7z
+
+# La base de données ne doit jamais être versionnée (données de production, taille variable) :
+# au premier lancement sans DB, l'application propose d'en créer une nouvelle ou d'en choisir une.
+src/FiltresApp/data/

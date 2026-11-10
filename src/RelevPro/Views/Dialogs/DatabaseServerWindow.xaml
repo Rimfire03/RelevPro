@@ -1,0 +1,124 @@
+﻿<Window x:Class="RelevPro.Views.Dialogs.DatabaseServerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Réglages avancés de la base de données"
+        Height="760" Width="680" MinHeight="520" MinWidth="560"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Réglages avancés de la base de données" Style="{StaticResource HeaderText}"/>
+            <TextBlock x:Name="CurrentModeText" Style="{StaticResource SectionText}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Mode de stockage -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="Mode de stockage" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <RadioButton x:Name="FileModeRadio" GroupName="Mode" Margin="0,0,0,6" Checked="OnModeChanged"
+                                     Content="Fichier SQLite (local ou sur un disque réseau, un seul poste en écriture à la fois)"/>
+                        <RadioButton x:Name="ServerModeRadio" GroupName="Mode" Checked="OnModeChanged"
+                                     Content="Serveur de base de données (plusieurs postes connectés ; le premier connecté écrit, les autres sont en lecture seule)"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Réglages du serveur -->
+                <Border x:Name="ServerPanel" Style="{StaticResource CardBorder}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="Serveur" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                        <TextBlock Text="Moteur :" Style="{StaticResource SectionText}" Margin="0,0,0,4"/>
+                        <ComboBox x:Name="ProviderCombo" SelectionChanged="OnProviderChanged" Margin="0,0,0,2">
+                            <ComboBoxItem Tag="PostgreSql" Content="PostgreSQL  -  Recommandé"/>
+                            <ComboBoxItem Tag="MariaDb" Content="MariaDB / MySQL"/>
+                            <ComboBoxItem Tag="SqlServer" Content="Microsoft SQL Server"/>
+                        </ComboBox>
+                        <TextBlock x:Name="ProviderHint" Style="{StaticResource SectionText}" TextWrapping="Wrap" Margin="0,2,0,10"/>
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="110"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Serveur (nom ou adresse IP) :" Style="{StaticResource SectionText}" Margin="0,0,0,4"/>
+                                <TextBox x:Name="HostBox"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Port :" Style="{StaticResource SectionText}" Margin="0,0,0,4"/>
+                                <TextBox x:Name="PortBox"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Nom de la base :" Style="{StaticResource SectionText}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="DatabaseBox" Margin="0,0,0,8"/>
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Utilisateur :" Style="{StaticResource SectionText}" Margin="0,0,0,4"/>
+                                <TextBox x:Name="UserBox"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Mot de passe :" Style="{StaticResource SectionText}" Margin="0,0,0,4"/>
+                                <PasswordBox x:Name="PasswordBox" Padding="6,5"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <CheckBox x:Name="SslCheck" Content="Connexion chiffrée (SSL/TLS)" Margin="0,2,0,10"/>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="TestButton" Content="Tester la connexion" Style="{StaticResource SecondaryButton}" Click="OnTestClick"/>
+                        </StackPanel>
+                        <TextBlock x:Name="TestResultText" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        <TextBlock Style="{StaticResource SectionText}" TextWrapping="Wrap" Margin="0,8,0,0"
+                                   Text="Le mot de passe est enregistré chiffré, pour votre session Windows uniquement. La base est créée sur le serveur si l'utilisateur en a le droit ; sinon, demandez à l'administrateur de créer une base vide avec ce nom."/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Outil de migration -->
+                <Border x:Name="MigrationPanel" Style="{StaticResource CardBorder}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="Migration entre fichier SQLite et serveur" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBlock Style="{StaticResource SectionText}" TextWrapping="Wrap" Margin="0,0,0,10"
+                                   Text="Copie toutes les données de la base actuellement ouverte vers le serveur ci-dessus. La base actuelle n'est pas modifiée ni supprimée. Si la copie échoue, rien n'est écrit sur le serveur. Demandez aux autres postes de fermer le logiciel pendant la copie. Dans l'autre sens, « Migrer ce serveur vers un fichier SQLite » copie toute la base du serveur ci-dessus dans le fichier SQLite du logiciel (une sauvegarde du fichier existant est faite avant remplacement)."/>
+                        <WrapPanel>
+                            <Button x:Name="MigrateButton" Content="Migrer la base actuelle vers ce serveur..." Style="{StaticResource PrimaryButton}"
+                                    HorizontalAlignment="Left" Click="OnMigrateClick"/>
+                            <Button x:Name="MigrateToFileButton" Content="Migrer ce serveur vers un fichier SQLite..." Style="{StaticResource SecondaryButton}"
+                                    Margin="8,0,0,0" HorizontalAlignment="Left" Click="OnMigrateToFileClick"/>
+                        </WrapPanel>
+                        <ProgressBar x:Name="MigrationProgress" IsIndeterminate="True" Height="6" Margin="0,10,0,0" Visibility="Collapsed"/>
+                        <TextBlock x:Name="MigrationStatusText" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Les dumps et sauvegardes sont regroupés dans Paramètres > Base de données > Sauvegarde. -->
+                <Border x:Name="DumpPanel" Style="{StaticResource CardBorder}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="Sauvegarde et dump complet" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBlock Style="{StaticResource SectionText}" TextWrapping="Wrap"
+                                   Text="Le téléchargement et le rechargement d'un dump complet (fichier utilisable comme sauvegarde, rechargeable sur n'importe quel moteur) se trouvent maintenant dans Paramètres → Base de données → Sauvegarde, avec les sauvegardes automatiques."/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button x:Name="CloseButton" Content="Fermer" Style="{StaticResource SecondaryButton}" Width="100" Click="OnCloseClick"/>
+            <Button x:Name="SaveButton" Content="Enregistrer et redémarrer" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Click="OnSaveClick"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>RelevPro</AssemblyName>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <Version>1.22.29</Version>
+    <Company>TomLine prod&amp;co</Company>
+    <Copyright>Â© TomLine prod&amp;co by Thomas Guidez</Copyright>
+  </PropertyGroup>
+
+  <!-- Canal de publication ("dev" pour les releases de la branche dev, passé par tools\Release.ps1 :
+       -p:ReleaseChannel=dev) : lu par App.DisplayVersion pour afficher la version avec son suffixe. -->
+  <ItemGroup Condition="'$(ReleaseChannel)' != ''">
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>ReleaseChannel</_Parameter1>
+      <_Parameter2>$(ReleaseChannel)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="TomLine.UI.Wpf" Version="1.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RelevPro.Core\RelevPro.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\app-logo-white.png" />
+    <!-- Uniquement en Debug (confort de dÃ©veloppement local) : le fichier .db ne doit jamais Ãªtre
+         inclus dans une release publiÃ©e (voir Configuration Release / dotnet publish), ni donc dans le
+         .zip distribuÃ©. CopiÃ©e dans RelevData\ (et non Ã  la racine) : seul l'exÃ©cutable doit rester Ã 
+         la racine du dossier publiÃ©, voir AppSettings.DataDirectory. -->
+    <None Include="data\filtres.db" CopyToOutputDirectory="PreserveNewest" TargetPath="RelevData\filtres.db" Condition="'$(Configuration)' != 'Release' AND Exists('data\filtres.db')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Contrat de licence utilisateur final, intÃ©grÃ© Ã  l'exÃ©cutable : volontairement PAS copiÃ© dans
+         RelevData\, puisque RelevData\CLUF.txt n'y est Ã©crit qu'Ã  l'acceptation du contrat au premier
+         lancement (voir App.Eula.cs). -->
+    <EmbeddedResource Include="Legal\CLUF.txt" LogicalName="RelevPro.CLUF.txt" />
+  </ItemGroup>
+
+</Project>

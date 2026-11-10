@@ -1,0 +1,29 @@
+<Application x:Class="RelevPro.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:RelevPro"
+             xmlns:vm="clr-namespace:RelevPro.ViewModels"
+             xmlns:views="clr-namespace:RelevPro.Views"
+             xmlns:vmr="clr-namespace:RelevPro.ViewModels.Releves"
+             xmlns:viewsr="clr-namespace:RelevPro.Views.Releves"
+             xmlns:conv="clr-namespace:RelevPro.Converters">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/TomLine.UI.Wpf;component/Themes/TomLineTheme.xaml"/>
+                <ResourceDictionary Source="Styles/Controls.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
+            <conv:InverseBoolConverter x:Key="InverseBool"/>
+            <conv:NullToCollapsedConverter x:Key="NullToCollapsed"/>
+
+            <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><views:SettingsView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:HelpViewModel}"><views:HelpView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vmr:ReadingViewModel}"><viewsr:ReadingView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vmr:ReadingViewListViewModel}"><viewsr:ReadingViewListView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vmr:MeterListViewModel}"><viewsr:MeterListView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vmr:NotificationsViewModel}"><viewsr:NotificationsView/></DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

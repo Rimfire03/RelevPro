@@ -1,0 +1,40 @@
+<Window x:Class="RelevPro.Views.Dialogs.LicenseActivationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Activation de la licence"
+        Height="400" Width="500"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="Qh" Grid.Row="0" Text="Activation de la licence" Style="{StaticResource HeaderText}"/>
+        <TextBlock x:Name="Qa" Grid.Row="1" Margin="0,8,0,16" TextWrapping="Wrap"
+                   Foreground="{StaticResource BrushTextSecondary}"/>
+
+        <TextBlock Grid.Row="2" Text="Clé de licence :" Margin="0,0,0,6" FontWeight="SemiBold"/>
+        <TextBox x:Name="Qb" Grid.Row="3" FontSize="14" Padding="8,6"
+                 KeyDown="Qd"/>
+
+        <!-- Démo automatique : visible uniquement quand aucune licence valide n'est en place (voir code). -->
+        <Button x:Name="Qi" Grid.Row="4" Content="Demander une démo (7 jours)" Style="{StaticResource SecondaryButton}"
+                HorizontalAlignment="Left" Margin="0,12,0,0" Click="Qj"/>
+
+        <TextBlock Grid.Row="5" x:Name="Qf" Margin="0,14,0,0" TextWrapping="Wrap" VerticalAlignment="Top"
+                   Foreground="{StaticResource BrushDanger}"/>
+
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button x:Name="Ql" Content="Quitter" Style="{StaticResource SecondaryButton}" Width="90" Click="Qg"/>
+            <Button x:Name="Qk" Content="Réessayer" Style="{StaticResource SecondaryButton}" Width="100" Click="Qm"/>
+            <Button x:Name="Qe" Content="Activer" Style="{StaticResource PrimaryButton}" Width="110" Click="Qc"/>
+        </StackPanel>
+    </Grid>
+</Window>

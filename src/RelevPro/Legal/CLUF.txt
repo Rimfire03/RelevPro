@@ -1,0 +1,206 @@
+CONTRAT DE LICENCE UTILISATEUR FINAL (CLUF)
+Logiciel « Suivi maintenance Filtres » (RelevPro) - Version 2.0 du 11 octobre 2026
+
+IDENTIFICATION DE L'ÉDITEUR
+
+Thomas GUIDEZ, entrepreneur individuel, exerçant sous le nom commercial « TomLine prod&co »,
+immatriculé au Registre du commerce et des sociétés de Cusset sous le numéro 522 433 333, dont
+l'établissement est situé 51B Rue des Tuileries, 03400 Yzeure (France). Contact : contact@tomlineprodco.fr
+(ci-après l'« Éditeur »).
+
+Le présent contrat (le « Contrat ») est conclu entre l'Éditeur et toute personne physique ou morale
+qui installe, copie ou utilise le logiciel « Suivi maintenance Filtres » (l'« Utilisateur »).
+
+EN CLIQUANT SUR « J'ACCEPTE », EN INSTALLANT OU EN UTILISANT LE LOGICIEL, L'UTILISATEUR RECONNAÎT
+AVOIR LU LE CONTRAT ET EN ACCEPTE L'ENSEMBLE DES CONDITIONS. S'IL NE LES ACCEPTE PAS, IL DOIT NI
+L'INSTALLER, NI LE COPIER, NI L'UTILISER.
+
+
+ARTICLE 1 - DÉFINITIONS
+
+« Logiciel » : le programme « Suivi maintenance Filtres » sous forme exécutable, ses modules
+(Filtre, Courroies, Roulements), ses mises à jour, sa documentation et les fichiers fournis avec
+lui, à l'exclusion des Données.
+
+« Données » : les informations saisies, importées ou produites par l'Utilisateur au moyen du
+Logiciel (base de données, exports PDF et Excel, réglages, logo).
+
+« Licence » : le droit d'utilisation du Logiciel concédé par le Contrat, gratuit ou associé à une
+clé de licence délivrée par l'Éditeur.
+
+« Consommateur » : toute personne physique qui agit à des fins qui n'entrent pas dans le cadre de
+son activité commerciale, industrielle, artisanale, libérale ou agricole, au sens de l'article
+liminaire du Code de la consommation.
+
+
+ARTICLE 2 - OBJET ET ACCEPTATION
+
+Le Contrat définit les conditions dans lesquelles l'Éditeur concède à l'Utilisateur le droit
+d'utiliser le Logiciel. L'acceptation électronique (clic sur « J'accepte ») vaut signature et
+engage l'Utilisateur ; l'Éditeur en conserve la trace sur le poste (copie du texte accepté). L'Utilisateur
+qui accepte pour le compte d'une société ou d'une association déclare avoir le pouvoir de l'engager.
+
+
+ARTICLE 3 - LICENCE CONCÉDÉE
+
+L'Éditeur concède à l'Utilisateur un droit personnel, non exclusif, non cessible et non transférable
+d'utiliser le Logiciel, pour ses besoins propres, sur le nombre de postes autorisé par sa Licence.
+Ce droit couvre l'installation, le chargement, l'affichage et l'exécution du Logiciel, ainsi que son
+installation sur un disque partagé du réseau interne de l'Utilisateur, dans la limite du nombre de
+postes autorisé, et une copie de sauvegarde à des fins de sécurité.
+
+Lorsque la Licence est associée à une clé, l'étendue des droits (durée, modules, nombre de postes)
+est celle attachée à cette clé. Tous les droits non expressément concédés sont réservés.
+
+
+ARTICLE 4 - RESTRICTIONS
+
+Sauf accord écrit préalable de l'Éditeur, et sous réserve des droits que la loi reconnaît
+impérativement à l'Utilisateur (notamment l'article L. 122-6-1 I, II et IV du Code de la propriété
+intellectuelle), il est interdit de :
+
+  a) vendre, louer, prêter, céder, distribuer ou sous-licencier le Logiciel ;
+  b) le mettre à la disposition de tiers, y compris sous forme de service en ligne ;
+  c) le modifier, l'adapter, le traduire ou créer des œuvres dérivées ;
+  d) le décompiler ou le désassembler, hors les cas où la loi l'autorise expressément
+     (interopérabilité) ;
+  e) contourner, désactiver ou altérer le contrôle de licence ou toute mesure technique de
+     protection ;
+  f) communiquer sa clé de licence à un tiers ou l'utiliser au-delà du nombre de postes autorisé ;
+  g) supprimer ou modifier les mentions de propriété, de marque ou de droit d'auteur.
+
+
+ARTICLE 5 - PROPRIÉTÉ INTELLECTUELLE
+
+Le Logiciel, sa documentation et ses éléments graphiques sont la propriété exclusive de l'Éditeur,
+protégés par le Code de la propriété intellectuelle et les conventions internationales relatives au
+droit d'auteur. Le Contrat ne transfère à l'Utilisateur aucun droit de propriété sur le Logiciel.
+Les Données restent la propriété exclusive de l'Utilisateur.
+
+
+ARTICLE 6 - LICENCE, CLÉ ET PRIX
+
+Lorsque la Licence est associée à une clé, le Logiciel vérifie celle-ci auprès des serveurs de
+l'Éditeur. Le prix, la durée et les modalités de paiement d'une Licence payante sont ceux indiqués
+à l'Utilisateur au moment de la commande. Une Licence ne peut être révoquée par l'Éditeur que pour
+un motif prévu à l'article 14 ou en cas de remboursement ; les Données restent alors accessibles à
+l'Utilisateur dans sa base.
+
+
+ARTICLE 7 - DONNÉES DE L'UTILISATEUR
+
+Les Données sont enregistrées localement (dossier « RelevData » ou emplacement choisi dans les
+Paramètres) : l'Éditeur n'y a pas accès et elles ne lui sont jamais transmises. L'Utilisateur en
+est seul responsable : il lui appartient d'effectuer des sauvegardes régulières (le Logiciel
+propose une fonction d'export de la base) et de ne pas placer la base dans un dossier synchronisé
+(type OneDrive ou Dropbox), ce qui pourrait l'endommager. Lorsque les Données contiennent des
+données personnelles de tiers, l'Utilisateur en est le responsable de traitement au sens du RGPD
+et doit remplir les obligations correspondantes.
+
+
+ARTICLE 8 - DONNÉES PERSONNELLES (LICENCE ET MISES À JOUR)
+
+L'Éditeur est responsable du traitement des seules données nécessaires à la gestion des licences
+et à la recherche des mises à jour, conformément au règlement (UE) 2016/679 (RGPD) et à la loi
+« Informatique et Libertés » du 6 janvier 1978.
+
+Données traitées : clé de licence, identifiant technique et nom du poste, version du Logiciel, date
+et adresse IP de la vérification (y compris, pour les mises à jour, par la plateforme de
+publication utilisée). Aucune Donnée de l'Utilisateur n'est transmise.
+
+Finalités : vérifier et gérer la Licence, rechercher les mises à jour, prévenir l'usage non
+autorisé, assurer le support. Bases légales : exécution du Contrat et intérêt légitime de l'Éditeur
+à protéger son Logiciel. Ces données sont conservées pendant la durée de la Licence, puis pendant
+la durée de prescription légale, et ne sont ni vendues ni cédées. L'Utilisateur dispose des droits
+d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité, exerçables
+en écrivant à contact@tomlineprodco.fr, et du droit d'introduire une réclamation auprès de la CNIL
+(www.cnil.fr).
+
+
+ARTICLE 9 - MISES À JOUR
+
+L'Éditeur peut proposer des mises à jour du Logiciel. Une mise à jour peut faire évoluer la
+structure de la base de données : le Logiciel réalise alors une sauvegarde automatique de la base
+avant de l'appliquer. Les mises à jour sont soumises au Contrat.
+
+Le Contrat peut évoluer : toute modification est soumise à une nouvelle acceptation au lancement
+suivant et ne s'applique pas tant qu'elle n'est pas acceptée ; à défaut, l'Éditeur peut cesser de
+fournir de nouvelles versions.
+
+
+ARTICLE 10 - COMPOSANTS TIERS
+
+Le Logiciel intègre des composants de tiers (notamment .NET, Entity Framework Core, SQLite,
+CommunityToolkit.Mvvm, ClosedXML et QuestPDF), qui restent la propriété de leurs auteurs et sont
+régis par leurs propres licences. Le Contrat ne modifie pas les droits et obligations résultant de
+ces licences.
+
+
+ARTICLE 11 - GARANTIE
+
+L'Éditeur apporte ses meilleurs soins à la conception du Logiciel, mais ne garantit pas, dans les
+limites permises par la loi, qu'il sera exempt d'erreur, qu'il fonctionnera sans interruption ou
+qu'il répondra aux besoins particuliers de l'Utilisateur. L'Éditeur s'efforce de corriger dans un
+délai raisonnable les anomalies qui lui sont signalées.
+
+Le Logiciel est un outil d'aide au suivi de la maintenance : il ne se substitue pas aux obligations
+réglementaires, aux préconisations des fabricants ni aux contrôles qui incombent à l'Utilisateur.
+Les garanties légales dont bénéficie le Consommateur (article 13) ne sont pas affectées.
+
+
+ARTICLE 12 - RESPONSABILITÉ
+
+Dans les limites permises par la loi, l'Éditeur n'est responsable que des dommages directs et
+prévisibles résultant d'un manquement à ses obligations, à l'exclusion des dommages indirects (perte
+de données, d'exploitation, de chance, de clientèle ou préjudice commercial). Pour l'Utilisateur
+professionnel, la responsabilité de l'Éditeur, toutes causes confondues, est plafonnée au prix
+effectivement payé pour la Licence au cours des douze (12) mois précédant le fait générateur.
+
+Ces limitations ne s'appliquent ni en cas de faute lourde ou dolosive, ni aux dommages corporels,
+ni lorsque la loi l'interdit, notamment à l'égard du Consommateur.
+
+
+ARTICLE 13 - DISPOSITIONS APPLICABLES AU CONSOMMATEUR
+
+Si l'Utilisateur est un Consommateur : (a) il bénéficie de la garantie légale de conformité
+(articles L. 224-25-12 et suivants du Code de la consommation, contenus et services numériques) et
+de la garantie des vices cachés (articles 1641 et suivants du Code civil), que le Contrat n'exclut
+ni ne limite ; (b) en cas de Licence payante souscrite à distance, il dispose d'un délai de
+rétractation de quatorze jours à compter de la commande, sauf s'il demande l'exécution immédiate
+et renonce expressément à ce droit (article L. 221-28 du Code de la consommation) ; la rétractation
+s'exerce par message à contact@tomlineprodco.fr.
+
+
+ARTICLE 14 - DURÉE ET RÉSILIATION
+
+Le Contrat prend effet à son acceptation et dure autant que la Licence. L'Utilisateur peut y mettre
+fin à tout moment en cessant d'utiliser le Logiciel et en le désinstallant. En cas de manquement
+grave de l'Utilisateur (notamment aux articles 3, 4 et 6), l'Éditeur peut résilier le Contrat de
+plein droit, quinze (15) jours après une mise en demeure restée sans effet (article 1225 du Code
+civil). À la fin du Contrat, l'Utilisateur cesse d'utiliser le Logiciel et en supprime les copies ;
+il conserve ses Données, qu'il lui appartient d'exporter. Les articles 5, 7, 8, 12 et 16
+survivent à la fin du Contrat.
+
+
+ARTICLE 15 - DISPOSITIONS GÉNÉRALES
+
+Le Contrat constitue l'intégralité de l'accord des parties sur son objet. Si une clause était
+déclarée nulle ou inapplicable, les autres resteraient en vigueur. Le fait de ne pas se prévaloir
+d'un manquement ne vaut pas renonciation. L'Éditeur peut céder le Contrat à un successeur dans
+l'exploitation du Logiciel ; l'Utilisateur ne le peut pas sans accord écrit. Aucune partie n'est
+responsable d'un manquement dû à un cas de force majeure (article 1218 du Code civil). Les
+registres informatiques de l'Éditeur font foi, sauf preuve contraire, de l'acceptation du Contrat
+et de l'état de la Licence. Le Contrat est rédigé en langue française.
+
+
+ARTICLE 16 - DROIT APPLICABLE ET LITIGES
+
+Le Contrat est régi par le droit français. En cas de litige, les parties recherchent d'abord une
+solution amiable, par réclamation écrite adressée à contact@tomlineprodco.fr. À défaut d'accord sous trente
+jours, le litige est porté devant les juridictions françaises compétentes : pour un Utilisateur
+professionnel, celles du ressort du siège de l'Éditeur (Cusset), dans la mesure où la loi le
+permet ; pour un Consommateur, celles désignées par les règles légales de compétence, sans que le
+Contrat le prive des dispositions impératives de protection du pays où il réside.
+
+
+© TomLine prod&co by Thomas Guidez - Tous droits réservés.
