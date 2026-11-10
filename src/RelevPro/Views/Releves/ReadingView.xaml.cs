@@ -47,7 +47,9 @@ public partial class ReadingView : UserControl
         box.SetBinding(Control.BackgroundProperty, new Binding($"Cells[{i}].BoxBackground"));
         box.SetValue(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Right);
         box.SetValue(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center);
-        box.SetValue(FrameworkElement.MarginProperty, new Thickness(2));
+        box.SetValue(FrameworkElement.MarginProperty, new Thickness(3, 2, 3, 2));
+        box.SetValue(Control.PaddingProperty, new Thickness(6, 0, 6, 0)); // le style du thème (padding 8,7) rogne le texte dans une ligne de 34 px
+        box.SetValue(FrameworkElement.MinHeightProperty, 0.0);
         box.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler((s, e) =>
         {
             if (e.Key == Key.Enter && s is TextBox tb) tb.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
