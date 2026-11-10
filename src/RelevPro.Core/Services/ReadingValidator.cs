@@ -18,6 +18,15 @@ public static class ReadingValidator
         var prev = list.LastOrDefault(r => r.Date < date.Date);
         var next = list.FirstOrDefault(r => r.Date > date.Date);
 
+        if (!meter.Cumulatif)
+        {
+            if (meter.SeuilHaut > 0 && value > meter.SeuilHaut)
+                anomalies.Add($"Valeur au-dessus du seuil d'alarme : {Fmt(value)} > {Fmt(meter.SeuilHaut)} {meter.Unite}.");
+            return anomalies;
+        }
+
+        if (prev is not null && meter.SeuilHaut > 0 && value - prev.Value > meter.SeuilHaut)
+            anomalies.Add($"Augmentation au-dessus du seuil d'alarme : {Fmt(value - prev.Value)} > {Fmt(meter.SeuilHaut)} {meter.Unite} depuis le {prev.Date:dd/MM/yyyy}.");
         if (prev is not null && value < prev.Value)
             anomalies.Add($"Le compteur diminue : {Fmt(value)} < {Fmt(prev.Value)} (relevé du {prev.Date:dd/MM/yyyy}).");
         if (next is not null && value > next.Value)

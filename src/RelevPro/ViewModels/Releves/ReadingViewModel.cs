@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,13 +12,55 @@ using RelevPro.Services;
 
 namespace RelevPro.ViewModels.Releves;
 
-/// <summary>Ligne affichée dans l'onglet « Saisie » : un compteur à relever ou une tâche à cocher, pour la période de la
-/// date de saisie choisie.</summary>
+/// <summary>Case de la grille de saisie : une ligne (compteur ou tâche) pour une colonne (semaine, mois...). Seules les
+/// cases « actives » et non futures se saisissent ; une ligne plus lente que la vue n'est active que dans la première
+/// colonne de sa période.</summary>
+public partial class GridCell : ObservableObject
+{
+    private readonly LineRow _row;
+    public Periods.Column Column { get; }
+
+    /// <summary>Début de la période de récurrence de la ligne (clé des tâches cochées).</summary>
+    public DateTime PeriodStart { get; }
+    public bool Active { get; }
+    public bool Editable { get; }
+    public int? ReadingId { get; }
+
+    [ObservableProperty] private string _text = string.Empty;
+    [ObservableProperty] private bool _isDone;
+
+    public GridCell(LineRow row, Periods.Column column, DateTime periodStart, bool active, bool editable, int? readingId)
+    {
+        _row = row; Column = column; PeriodStart = periodStart; Active = active; Editable = editable; ReadingId = readingId;
+    }
+
+    public Visibility BoxVisibility => Editable && _row.IsMeter ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility CheckVisibility => Editable && _row.IsTask ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility BlankVisibility => Editable ? Visibility.Collapsed : Visibility.Visible;
+    public string Blank => Active ? string.Empty : "—";
+
+    partial void OnTextChanged(string value) => Defer(() => _row.Owner.SaveCell(this));
+    partial void OnIsDoneChanged(bool value) => Defer(() => _row.Owner.ToggleTask(this, value));
+
+    private void Defer(Action a)
+    {
+        if (!_row.Owner.Loaded) return;
+        Application.Current.Dispatcher.BeginInvoke(a);
+    }
+
+    public LineRow Row => _row;
+}
+
+/// <summary>Ligne de la grille : un compteur ou une tâche, avec ses cases par colonne.</summary>
 public partial class LineRow : ObservableObject
 {
-    private readonly ReadingViewModel _owner;
+    public ReadingViewModel Owner { get; }
     public ViewLine Line { get; }
+    public List<GridCell> Cells { get; } = new();
 
+    public LineRow(ReadingViewModel owner, ViewLine line) { Owner = owner; Line = line; }
+
+    public string Groupe => Line.Groupe;
     public string Title => Line.Titre;
     public bool IsMeter => Line.Kind == LineKind.Compteur;
     public bool IsTask => !IsMeter;
@@ -25,21 +68,12 @@ public partial class LineRow : ObservableObject
     public string RecurrenceName => Periods.Name(Line.Recurrence);
     public string Unit => Line.Meter?.Unite ?? string.Empty;
 
-    public string PeriodLabel { get; init; } = string.Empty;
-    public string LastText { get; init; } = string.Empty;
+    public string ConsumptionText { get; init; } = string.Empty;
     public string StatusText { get; init; } = string.Empty;
     public Brush StatusBrush { get; init; } = Brushes.Gray;
 
-    [ObservableProperty] private string _inputText = string.Empty;
-    [ObservableProperty] private bool _isDone;
-
-    public LineRow(ReadingViewModel owner, ViewLine line) { _owner = owner; Line = line; }
-
-    partial void OnIsDoneChanged(bool value) { if (_owner.Loaded && IsTask) _owner.ToggleTask(this, value); }
-
-    [RelayCommand] private void Save() => _owner.SaveMeter(this);
-    [RelayCommand] private void Edit() => _owner.EditLine(this);
-    [RelayCommand] private void Delete() => _owner.DeleteLine(this);
+    [RelayCommand] private void Edit() => Owner.EditLine(this);
+    [RelayCommand] private void Delete() => Owner.DeleteLine(this);
 }
 
 public sealed record ReadingRow(MeterReading Reading, string Meter, string Unit)
@@ -54,28 +88,39 @@ public sealed record ReadingRow(MeterReading Reading, string Meter, string Unit)
 public partial class ReadingViewModel : ObservableObject
 {
     private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
-    private static readonly Brush Ok = Freeze("#16A34A"), Late = Freeze("#DC2626"), Pending = Freeze("#D97706");
+    private static readonly Brush Ok = Freeze("#16A34A"), Late = Freeze("#DC2626"), Pending = Freeze("#D97706"), None = Freeze("#94A3B8");
 
     private readonly MainViewModel _main;
     private readonly int _viewId;
+    private Recurrence _rec = Recurrence.Hebdo;
     internal bool Loaded;
 
     public string ViewName { get; private set; } = string.Empty;
+    public string ViewSubtitle { get; private set; } = string.Empty;
     public ObservableCollection<LineRow> Lines { get; } = new();
     public ObservableCollection<ReadingRow> Readings { get; } = new();
     public List<int> Years { get; private set; } = new();
+
+    /// <summary>Colonnes de la grille (une par période de la vue) ; la vue XAML recrée ses colonnes sur <see cref="ColumnsChanged"/>.</summary>
+    public List<string> ColumnHeaders { get; private set; } = new();
+    public event Action? ColumnsChanged;
 
     [ObservableProperty] private DateTime _refDate = DateTime.Today;
     [ObservableProperty] private int _selectedYear = DateTime.Today.Year;
     [ObservableProperty] private DataView? _monthlyTable;
     [ObservableProperty] private DataView? _yearlyTable;
     [ObservableProperty] private string _statusMessage = string.Empty;
+    [ObservableProperty] private string _periodTitle = string.Empty;
+    [ObservableProperty] private string _consumptionHeader = "Consommation";
 
     public ReadingViewModel(MainViewModel main, int viewId)
     {
         _main = main;
         _viewId = viewId;
-        ViewName = App.Db.ReadingViews.AsNoTracking().FirstOrDefault(v => v.Id == viewId)?.Nom ?? "(vue supprimée)";
+        var v = App.Db.ReadingViews.AsNoTracking().FirstOrDefault(x => x.Id == viewId);
+        ViewName = v?.Nom ?? "(vue supprimée)";
+        _rec = v?.Recurrence ?? Recurrence.Hebdo;
+        ViewSubtitle = (v is { Famille.Length: > 0 } ? v.Famille + " · " : "") + "Vue " + Periods.Name(_rec).ToLowerInvariant();
         Reload();
     }
 
@@ -101,55 +146,82 @@ public partial class ReadingViewModel : ObservableObject
         ReloadReadings();
     }
 
+    private Recurrence LineRec(ViewLine l) => l.Recurrence < _rec ? _rec : l.Recurrence;
+
     private void ReloadLines()
     {
         Loaded = false;
         Lines.Clear();
-        var today = RefDate.Date;
+        var today = DateTime.Today;
+        var cols = Periods.Columns(_rec, RefDate);
+        var window = Periods.Window(_rec);
+        var wStart = Periods.Start(window, RefDate);
+        var wEnd = Periods.Next(window, wStart);
+        PeriodTitle = Periods.Label(window, wStart);
+        ConsumptionHeader = "Consommation " + PeriodTitle;
+        var headers = cols.Select(c => Periods.ColumnLabel(_rec, c.Start)).ToList();
+        if (!headers.SequenceEqual(ColumnHeaders)) { ColumnHeaders = headers; ColumnsChanged?.Invoke(); }
+
         var lines = App.Db.ViewLines.AsNoTracking().Include(l => l.Meter)
             .Where(l => l.ReadingViewId == _viewId).OrderBy(l => l.Ordre).ThenBy(l => l.Id).ToList();
         var meterIds = lines.Where(l => l.MeterId != null).Select(l => l.MeterId!.Value).Distinct().ToList();
-        var readings = App.Db.MeterReadings.AsNoTracking().Where(r => meterIds.Contains(r.MeterId)).OrderBy(r => r.Date).ToList().ToLookup(r => r.MeterId);
+        var readings = App.Db.MeterReadings.AsNoTracking().Where(r => meterIds.Contains(r.MeterId)).OrderBy(r => r.Date).ThenBy(r => r.Id).ToList().ToLookup(r => r.MeterId);
         var lineIds = lines.Select(l => l.Id).ToList();
         var completions = App.Db.TaskCompletions.AsNoTracking().Where(t => lineIds.Contains(t.ViewLineId)).ToList();
 
         foreach (var l in lines)
         {
-            var start = Periods.Start(l.Recurrence, today);
-            var end = Periods.Next(l.Recurrence, start);
-            var label = Periods.Label(l.Recurrence, start);
-            string last = "", status;
-            Brush brush;
-            var done = false;
-            string input = "";
-            if (l.Kind == LineKind.Compteur)
+            var r = LineRec(l);
+            var all = l.Kind == LineKind.Compteur ? readings[l.MeterId ?? 0].ToList() : new List<MeterReading>();
+            var cells = new List<(Periods.Column Col, DateTime Lp, DateTime LpEnd, bool Active, bool Editable, MeterReading? Existing, bool Done)>();
+            foreach (var c in cols)
             {
-                var all = readings[l.MeterId ?? 0].ToList();
-                var inPeriod = all.Where(r => r.Date >= start && r.Date < end).ToList();
-                var lastReading = all.LastOrDefault(r => r.Date.Date <= today);
-                if (lastReading is not null) last = $"{lastReading.Value.ToString("0.####", Fr)} {l.Meter?.Unite} ({lastReading.Date:dd/MM/yyyy}){(lastReading.Forced ? " ⚠" : "")}";
-                var sameDay = all.FirstOrDefault(r => r.Date.Date == today);
-                if (sameDay is not null) input = sameDay.Value.ToString("0.####", Fr);
-                done = inPeriod.Count > 0;
-                (status, brush) = StatusFor(done, l, start);
+                var active = Periods.IsActive(_rec, r, c.Start);
+                var lp = Periods.Start(r, c.Start);
+                var lpEnd = Periods.Next(r, lp);
+                MeterReading? existing = null;
+                var done = false;
+                if (active)
+                {
+                    if (l.Kind == LineKind.Compteur)
+                    {
+                        var (from, to) = r == _rec ? (c.Start, c.End) : (lp, lpEnd);
+                        existing = all.LastOrDefault(x => x.Date >= from && x.Date < to);
+                    }
+                    else done = completions.Any(t => t.ViewLineId == l.Id && t.PeriodStart.Date == lp);
+                }
+                cells.Add((c, lp, lpEnd, active, active && c.Start <= today, existing, done));
             }
+
+            // statut de la ligne : en retard si une case échue (période de la ligne terminée) est vide
+            var due = cells.Where(x => x.Active && x.Col.Start <= today).ToList();
+            string status; Brush brush;
+            if (due.Count == 0) (status, brush) = ("—", None);
             else
             {
-                var c = completions.FirstOrDefault(t => t.ViewLineId == l.Id && t.PeriodStart.Date == start);
-                done = c is not null;
-                if (c is not null) last = $"Fait le {c.CompletedAt:dd/MM/yyyy} ({c.CompletedBy})";
-                (status, brush) = StatusFor(done, l, start);
+                var missing = due.Where(x => l.Kind == LineKind.Compteur ? x.Existing is null : !x.Done).ToList();
+                if (missing.Count == 0) (status, brush) = ("Saisi", Ok);
+                else if (missing.Any(x => (r == _rec ? x.Col.End : x.LpEnd) <= today && l.CreatedOn.Date < x.Col.End)) (status, brush) = ("En retard", Late);
+                else (status, brush) = ("À saisir", Pending);
             }
-            Lines.Add(new LineRow(this, l) { PeriodLabel = label, LastText = last, StatusText = status, StatusBrush = brush, InputText = input, IsDone = l.Kind == LineKind.Tache && done });
+
+            var cons = string.Empty;
+            if (l.Kind == LineKind.Compteur && l.Meter is { Cumulatif: true } m && ConsumptionService.Consumption(all, wStart, wEnd) is { } v)
+                cons = $"{v.ToString("#,0.##", Fr)} {m.Unite}".Trim();
+
+            var row = new LineRow(this, l) { ConsumptionText = cons, StatusText = status, StatusBrush = brush };
+            foreach (var x in cells)
+            {
+                var cell = new GridCell(row, x.Col, x.Lp, x.Active, x.Editable, x.Existing?.Id)
+                {
+                    Text = x.Existing is null ? string.Empty : x.Existing.Value.ToString("0.####", Fr),
+                    IsDone = x.Done
+                };
+                row.Cells.Add(cell);
+            }
+            Lines.Add(row);
         }
         Loaded = true;
-    }
-
-    private static (string, Brush) StatusFor(bool done, ViewLine l, DateTime currentStart)
-    {
-        if (done) return ("Saisi", Ok);
-        var late = l.CreatedOn.Date < currentStart && Periods.Start(l.Recurrence, DateTime.Today) > currentStart;
-        return late ? ("En retard", Late) : ("À saisir", Pending);
     }
 
     private void ReloadMonthly()
@@ -190,19 +262,23 @@ public partial class ReadingViewModel : ObservableObject
 
     // ---- Saisie ----
 
-    internal void SaveMeter(LineRow row)
+    internal void SaveCell(GridCell cell)
     {
-        if (!App.GuardWritable()) return;
-        var text = (row.InputText ?? "").Trim().Replace(" ", "");
+        if (!App.GuardWritable()) { ReloadLines(); return; }
+        var text = (cell.Text ?? "").Trim().Replace(" ", "");
+        if (text.Length == 0) { ReloadLines(); return; } // effacer une case ne supprime pas le relevé (voir l'onglet Relevés)
         if (!decimal.TryParse(text.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out var value))
         {
             App.Dialogs.ShowMessage("Valeur invalide", "Saisissez un nombre (ex. 1234,5).");
+            ReloadLines();
             return;
         }
-        var date = RefDate.Date;
-        var meter = App.Db.Meters.First(m => m.Id == row.Line.MeterId);
+        var meter = App.Db.Meters.First(m => m.Id == cell.Row.Line.MeterId);
         var all = App.Db.MeterReadings.Where(r => r.MeterId == meter.Id).ToList();
-        var existing = all.FirstOrDefault(r => r.Date.Date == date);
+        var existing = cell.ReadingId is { } id ? all.FirstOrDefault(r => r.Id == id) : null;
+        if (existing is not null && existing.Value == value) { ReloadLines(); return; }
+        // un relevé en retard est daté de la période de la case (jamais dans le futur)
+        var date = existing?.Date.Date ?? Max(cell.Column.Start, Min(DateTime.Today, cell.Column.End.AddDays(-1)));
         var anomalies = ReadingValidator.Check(meter, date, value, all.Where(r => r != existing));
 
         var forced = false;
@@ -233,13 +309,16 @@ public partial class ReadingViewModel : ObservableObject
         _main.RefreshNotificationBadge();
     }
 
-    internal void ToggleTask(LineRow row, bool done)
+    private static DateTime Min(DateTime a, DateTime b) => a < b ? a : b;
+    private static DateTime Max(DateTime a, DateTime b) => a > b ? a : b;
+
+    internal void ToggleTask(GridCell cell, bool done)
     {
         if (!App.GuardWritable()) { ReloadLines(); return; }
-        var start = Periods.Start(row.Line.Recurrence, RefDate);
-        var existing = App.Db.TaskCompletions.FirstOrDefault(t => t.ViewLineId == row.Line.Id && t.PeriodStart == start);
+        var lineId = cell.Row.Line.Id;
+        var existing = App.Db.TaskCompletions.FirstOrDefault(t => t.ViewLineId == lineId && t.PeriodStart == cell.PeriodStart);
         if (done && existing is null)
-            App.Db.TaskCompletions.Add(new TaskCompletion { ViewLineId = row.Line.Id, PeriodStart = start, CompletedAt = DateTime.Now, CompletedBy = Environment.UserName });
+            App.Db.TaskCompletions.Add(new TaskCompletion { ViewLineId = lineId, PeriodStart = cell.PeriodStart, CompletedAt = DateTime.Now, CompletedBy = Environment.UserName });
         else if (!done && existing is not null)
             App.Db.TaskCompletions.Remove(existing);
         App.Db.SaveChanges();
@@ -247,9 +326,19 @@ public partial class ReadingViewModel : ObservableObject
         _main.RefreshNotificationBadge();
     }
 
+    // ---- Navigation ----
+
+    [RelayCommand] private void Today() => RefDate = DateTime.Today;
+    [RelayCommand] private void PreviousPeriod() { var w = Periods.Window(_rec); RefDate = Periods.Previous(w, Periods.Start(w, RefDate)); }
+    [RelayCommand] private void NextPeriod() { var w = Periods.Window(_rec); RefDate = Periods.Next(w, Periods.Start(w, RefDate)); }
+
     // ---- Lignes de la vue ----
 
-    private static readonly List<string> RecurrenceNames = Enum.GetValues<Recurrence>().Select(Periods.Name).ToList();
+    /// <summary>Récurrences permises : celle de la vue ou plus lentes (une ligne n'est jamais plus rapide que sa vue).</summary>
+    private List<Recurrence> Allowed => Enum.GetValues<Recurrence>().Where(r => r >= _rec).ToList();
+    private List<string> AllowedNames => Allowed.Select(Periods.Name).ToList();
+
+    private string LastGroup() => App.Db.ViewLines.Where(l => l.ReadingViewId == _viewId).OrderByDescending(l => l.Ordre).Select(l => l.Groupe).FirstOrDefault() ?? string.Empty;
 
     [RelayCommand]
     private void AddMeterLine()
@@ -262,11 +351,13 @@ public partial class ReadingViewModel : ObservableObject
             return;
         }
         var index = 0;
-        var rec = (int)Recurrence.Mensuel;
+        var rec = 0;
+        var groupe = LastGroup();
         var fields = new List<EditField>
         {
             EditField.ComboField("Compteur", meters.Select(m => string.IsNullOrEmpty(m.Unite) ? m.Nom : $"{m.Nom} ({m.Unite})").ToList(), () => index, v => index = v),
-            EditField.ComboField("Récurrence de saisie", RecurrenceNames, () => rec, v => rec = v)
+            EditField.ComboField("Récurrence de saisie", AllowedNames, () => rec, v => rec = v),
+            EditField.Text("Section (regroupe les lignes, facultatif)", () => groupe, v => groupe = v)
         };
         if (!App.Dialogs.EditFields("Ajouter un compteur à la vue", fields)) return;
         var meter = meters[Math.Clamp(index, 0, meters.Count - 1)];
@@ -275,7 +366,7 @@ public partial class ReadingViewModel : ObservableObject
             App.Dialogs.ShowMessage("Déjà présent", $"« {meter.Nom} » figure déjà dans cette vue.");
             return;
         }
-        AddLine(new ViewLine { Kind = LineKind.Compteur, MeterId = meter.Id, Recurrence = (Recurrence)rec });
+        AddLine(new ViewLine { Kind = LineKind.Compteur, MeterId = meter.Id, Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)], Groupe = groupe.Trim() });
     }
 
     [RelayCommand]
@@ -283,14 +374,16 @@ public partial class ReadingViewModel : ObservableObject
     {
         if (!App.GuardWritable()) return;
         var label = string.Empty;
-        var rec = (int)Recurrence.Mensuel;
+        var rec = 0;
+        var groupe = LastGroup();
         var fields = new List<EditField>
         {
             EditField.Text("Tâche à cocher", () => label, v => label = v, required: true),
-            EditField.ComboField("Récurrence de saisie", RecurrenceNames, () => rec, v => rec = v)
+            EditField.ComboField("Récurrence de saisie", AllowedNames, () => rec, v => rec = v),
+            EditField.Text("Section (regroupe les lignes, facultatif)", () => groupe, v => groupe = v)
         };
         if (!App.Dialogs.EditFields("Ajouter une tâche à la vue", fields)) return;
-        AddLine(new ViewLine { Kind = LineKind.Tache, Libelle = label.Trim(), Recurrence = (Recurrence)rec });
+        AddLine(new ViewLine { Kind = LineKind.Tache, Libelle = label.Trim(), Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)], Groupe = groupe.Trim() });
     }
 
     private void AddLine(ViewLine line)
@@ -309,13 +402,16 @@ public partial class ReadingViewModel : ObservableObject
         if (!App.GuardWritable()) return;
         var line = App.Db.ViewLines.First(l => l.Id == row.Line.Id);
         var label = line.Libelle;
-        var rec = (int)line.Recurrence;
+        var groupe = line.Groupe;
+        var rec = Math.Max(0, Allowed.IndexOf(LineRec(line)));
         var fields = new List<EditField>();
         if (line.Kind == LineKind.Tache) fields.Add(EditField.Text("Tâche à cocher", () => label, v => label = v, required: true));
-        fields.Add(EditField.ComboField("Récurrence de saisie", RecurrenceNames, () => rec, v => rec = v));
+        fields.Add(EditField.ComboField("Récurrence de saisie", AllowedNames, () => rec, v => rec = v));
+        fields.Add(EditField.Text("Section (regroupe les lignes, facultatif)", () => groupe, v => groupe = v));
         if (!App.Dialogs.EditFields("Modifier la ligne", fields)) return;
         if (line.Kind == LineKind.Tache) line.Libelle = label.Trim();
-        line.Recurrence = (Recurrence)rec;
+        line.Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)];
+        line.Groupe = groupe.Trim();
         App.Db.SaveChanges();
         Reload();
         _main.RefreshNotificationBadge();
@@ -333,8 +429,6 @@ public partial class ReadingViewModel : ObservableObject
         Reload();
         _main.RefreshNotificationBadge();
     }
-
-    [RelayCommand] private void Today() => RefDate = DateTime.Today;
 
     [RelayCommand]
     private void DeleteReading(ReadingRow row)

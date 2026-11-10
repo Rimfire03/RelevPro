@@ -106,14 +106,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
         var selectedViewId = SelectedItem?.ViewId;
         _viewsMenu.Children.Clear();
         var views = App.Db.ReadingViews.AsNoTracking().OrderBy(v => v.Ordre).ThenBy(v => v.Nom).ToList();
-        foreach (var v in views)
+        NavigationItem Leaf(RelevPro.Core.Models.ReadingView v) { var id = v.Id; return new NavigationItem(v.Nom, "▫", () => new ReadingViewModel(this, id), viewId: id); }
+        foreach (var fam in views.Where(v => v.Famille.Length > 0).GroupBy(v => v.Famille, StringComparer.CurrentCultureIgnoreCase).OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase))
         {
-            var id = v.Id;
-            _viewsMenu.Children.Add(new NavigationItem(v.Nom, "▫", () => new ReadingViewModel(this, id), viewId: id));
+            var node = new NavigationItem(fam.Key, "📁", () => new ReadingViewListViewModel(this)) { IsExpanded = true };
+            foreach (var v in fam) node.Children.Add(Leaf(v));
+            _viewsMenu.Children.Add(node);
         }
+        foreach (var v in views.Where(v => v.Famille.Length == 0)) _viewsMenu.Children.Add(Leaf(v));
         if (selectedViewId is { } sel)
-            SelectedItem = _viewsMenu.Children.FirstOrDefault(c => c.ViewId == sel) ?? _viewsMenu;
+            SelectedItem = ViewItems().FirstOrDefault(c => c.ViewId == sel) ?? _viewsMenu;
     }
+
+    /// <summary>Feuilles du menu « Relevés » (vues), regroupées ou non par famille.</summary>
+    private IEnumerable<NavigationItem> ViewItems() =>
+        _viewsMenu.Children.SelectMany(c => c.ViewId is not null ? new[] { c } : c.Children.ToArray());
 
     /// <summary>Oublie les écrans déjà construits (sauf l'écran affiché) pour qu'ils relisent la base à la prochaine ouverture.</summary>
     public void ResetOtherScreens()
@@ -122,7 +129,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             if (item != SelectedItem) item.Reset();
             foreach (var child in item.Children)
+            {
                 if (child != SelectedItem) child.Reset();
+                foreach (var leaf in child.Children) if (leaf != SelectedItem) leaf.Reset();
+            }
         }
     }
 
@@ -130,7 +140,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public void OpenView(int viewId)
     {
-        var item = _viewsMenu.Children.FirstOrDefault(c => c.ViewId == viewId);
+        var item = ViewItems().FirstOrDefault(c => c.ViewId == viewId);
         if (item is not null) SelectedItem = item;
     }
 
@@ -140,7 +150,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (value == _viewsMenu) _viewsMenu.IsExpanded = true;
 
         foreach (var item in NavigationItems) item.IsSelected = item == value;
-        foreach (var child in _viewsMenu.Children) child.IsSelected = child == value;
+        foreach (var child in _viewsMenu.Children) { child.IsSelected = child == value; foreach (var leaf in child.Children) leaf.IsSelected = leaf == value; }
         HelpItem.IsSelected = value == HelpItem;
         SettingsItem.IsSelected = value == SettingsItem;
         NotificationsItem.IsSelected = value == NotificationsItem;

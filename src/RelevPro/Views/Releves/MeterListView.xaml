@@ -11,7 +11,8 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Compteur" Binding="{Binding Nom}" Width="*"/>
                 <DataGridTextColumn Header="Unité" Binding="{Binding Unite}" Width="90"/>
-                <DataGridTextColumn Header="Écart toléré" Binding="{Binding Seuil}" Width="110"/>
+                <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="130"/>
+                <DataGridTextColumn Header="Seuil d'alarme" Binding="{Binding Seuil}" Width="120"/>
                 <DataGridTextColumn Header="Utilisation" Binding="{Binding Usage}" Width="220"/>
                 <DataGridTemplateColumn Width="190">
                     <DataGridTemplateColumn.CellTemplate>

@@ -89,6 +89,9 @@ public class RelevDbContext : DbContext
     {
         modelBuilder.Entity<SharedAsset>().HasKey(a => a.Key);
 
+        modelBuilder.Entity<ReadingView>().Property(v => v.Famille).HasMaxLength(200);
+        modelBuilder.Entity<ViewLine>().Property(l => l.Groupe).HasMaxLength(200);
+        modelBuilder.Entity<Meter>().Property(m => m.SeuilHaut).HasPrecision(18, 4);
         modelBuilder.Entity<ViewLine>().HasOne(l => l.ReadingView).WithMany(v => v.Lines).HasForeignKey(l => l.ReadingViewId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<ViewLine>().HasOne(l => l.Meter).WithMany().HasForeignKey(l => l.MeterId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<MeterReading>().HasOne(r => r.Meter).WithMany().HasForeignKey(r => r.MeterId).OnDelete(DeleteBehavior.Cascade);

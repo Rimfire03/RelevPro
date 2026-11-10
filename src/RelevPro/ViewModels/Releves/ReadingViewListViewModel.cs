@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
 using RelevPro.Core.Models;
+using RelevPro.Core.Services;
 using RelevPro.Services;
 
 namespace RelevPro.ViewModels.Releves;
@@ -10,6 +11,8 @@ namespace RelevPro.ViewModels.Releves;
 public sealed record ViewRow(ReadingView View, int MeterLines, int TaskLines)
 {
     public string Nom => View.Nom;
+    public string Famille => View.Famille;
+    public string RecurrenceName => Periods.Name(View.Recurrence);
     public string Summary => $"{MeterLines} compteur(s), {TaskLines} tâche(s)";
 }
 
@@ -29,25 +32,34 @@ public partial class ReadingViewListViewModel : ObservableObject
     {
         Rows.Clear();
         var lines = App.Db.ViewLines.AsNoTracking().ToList().ToLookup(l => l.ReadingViewId);
-        foreach (var v in App.Db.ReadingViews.AsNoTracking().OrderBy(v => v.Ordre).ThenBy(v => v.Nom).ToList())
+        foreach (var v in App.Db.ReadingViews.AsNoTracking().OrderBy(v => v.Famille).ThenBy(v => v.Ordre).ThenBy(v => v.Nom).ToList())
             Rows.Add(new ViewRow(v, lines[v.Id].Count(l => l.Kind == LineKind.Compteur), lines[v.Id].Count(l => l.Kind == LineKind.Tache)));
     }
 
-    private static bool Edit(string title, ref string name)
+    private static readonly List<string> RecurrenceNames = Enum.GetValues<Recurrence>().Select(Periods.Name).ToList();
+
+    /// <summary>Saisie nom, famille et fréquence de la vue.</summary>
+    private static bool Edit(string title, ReadingView v)
     {
-        var n = name;
-        var ok = App.Dialogs.EditFields(title, new List<EditField> { EditField.Text("Nom de la vue", () => n, v => n = v, required: true) });
-        name = n.Trim();
-        return ok && name.Length > 0;
+        var nom = v.Nom; var fam = v.Famille; var rec = (int)v.Recurrence;
+        var ok = App.Dialogs.EditFields(title, new List<EditField>
+        {
+            EditField.Text("Nom de la vue", () => nom, x => nom = x, required: true),
+            EditField.Text("Famille (regroupement dans le menu, vide = aucune)", () => fam, x => fam = x),
+            EditField.ComboField("Fréquence de la vue (une colonne par période)", RecurrenceNames, () => rec, x => rec = x)
+        });
+        if (!ok || string.IsNullOrWhiteSpace(nom)) return false;
+        v.Nom = nom.Trim(); v.Famille = fam.Trim(); v.Recurrence = (Recurrence)rec;
+        return true;
     }
 
     [RelayCommand]
     private void Add()
     {
         if (!App.GuardWritable()) return;
-        var name = string.Empty;
-        if (!Edit("Nouvelle vue de relevé", ref name)) return;
-        App.Db.ReadingViews.Add(new ReadingView { Nom = name, Ordre = (App.Db.ReadingViews.Max(v => (int?)v.Ordre) ?? -1) + 1 });
+        var v = new ReadingView { Ordre = (App.Db.ReadingViews.Max(x => (int?)x.Ordre) ?? -1) + 1 };
+        if (!Edit("Nouvelle vue de relevé", v)) return;
+        App.Db.ReadingViews.Add(v);
         App.Db.SaveChanges();
         Load();
         _main.RebuildViewItems();
@@ -57,9 +69,10 @@ public partial class ReadingViewListViewModel : ObservableObject
     private void Rename(ViewRow row)
     {
         if (!App.GuardWritable()) return;
-        var name = row.View.Nom;
-        if (!Edit("Renommer la vue", ref name)) return;
-        App.Db.ReadingViews.First(v => v.Id == row.View.Id).Nom = name;
+        var v = App.Db.ReadingViews.First(x => x.Id == row.View.Id);
+        if (!Edit("Modifier la vue", v)) { App.Db.Entry(v).Reload(); return; }
+        // une ligne n'est jamais plus rapide que sa vue
+        foreach (var l in App.Db.ViewLines.Where(l => l.ReadingViewId == v.Id && l.Recurrence < v.Recurrence).ToList()) l.Recurrence = v.Recurrence;
         App.Db.SaveChanges();
         Load();
         _main.RebuildViewItems();

@@ -4,47 +4,30 @@
     <DockPanel Margin="24">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
             <TextBlock Text="{Binding ViewName}" Style="{StaticResource HeaderText}"/>
-            <TextBlock Text="Saisie des relevés et des tâches, récapitulatifs de consommation." Style="{StaticResource SectionText}" Margin="0,4,0,0"/>
+            <TextBlock Text="{Binding ViewSubtitle}" Style="{StaticResource SectionText}" Margin="0,4,0,0"/>
         </StackPanel>
 
         <TabControl>
             <TabItem Header="Saisie">
                 <DockPanel Margin="0,12,0,0">
                     <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                        <TextBlock Text="Date de saisie :" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <DatePicker SelectedDate="{Binding RefDate}" Width="140" Margin="0,0,8,0"/>
+                        <Button Content="◀" Style="{StaticResource SecondaryButton}" Command="{Binding PreviousPeriodCommand}" Margin="0,0,6,0" Padding="10,3"/>
+                        <TextBlock Text="{Binding PeriodTitle}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" MinWidth="170" TextAlignment="Center"/>
+                        <Button Content="▶" Style="{StaticResource SecondaryButton}" Command="{Binding NextPeriodCommand}" Margin="6,0,12,0" Padding="10,3"/>
+                        <DatePicker SelectedDate="{Binding RefDate}" Width="130" Margin="0,0,8,0"/>
                         <Button Content="Aujourd'hui" Style="{StaticResource SecondaryButton}" Command="{Binding TodayCommand}" Margin="0,0,24,0"/>
                         <Button Content="+ Compteur" Style="{StaticResource PrimaryButton}" Command="{Binding AddMeterLineCommand}" Margin="0,0,8,0"/>
                         <Button Content="+ Tâche" Style="{StaticResource PrimaryButton}" Command="{Binding AddTaskLineCommand}"/>
                     </WrapPanel>
                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,8,0,0" Foreground="{StaticResource BrushPrimary}" TextWrapping="Wrap"/>
-                    <DataGrid ItemsSource="{Binding Lines}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                              HeadersVisibility="Column" SelectionMode="Single" RowHeight="36" GridLinesVisibility="Horizontal">
+                    <!-- Colonnes de saisie (une par semaine / période) ajoutées dans ReadingView.xaml.cs, entre « Récurrence » et « Consommation ». -->
+                    <DataGrid x:Name="SaisieGrid" ItemsSource="{Binding Lines}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                              HeadersVisibility="Column" SelectionMode="Single" RowHeight="34" GridLinesVisibility="All">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="" Binding="{Binding KindIcon}" IsReadOnly="True" Width="32"/>
-                            <DataGridTextColumn Header="Ligne" Binding="{Binding Title}" IsReadOnly="True" Width="*" MinWidth="160"/>
-                            <DataGridTextColumn Header="Récurrence" Binding="{Binding RecurrenceName}" IsReadOnly="True" Width="110"/>
-                            <DataGridTextColumn Header="Période" Binding="{Binding PeriodLabel}" IsReadOnly="True" Width="190"/>
-                            <DataGridTextColumn Header="Dernier relevé / réalisation" Binding="{Binding LastText}" IsReadOnly="True" Width="220"/>
-                            <DataGridTemplateColumn Header="Saisie" Width="260">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Grid>
-                                            <StackPanel Orientation="Horizontal" Visibility="{Binding IsMeter, Converter={StaticResource BoolToVis}}">
-                                                <TextBox Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}" Width="110" VerticalContentAlignment="Center" Margin="4,0">
-                                                    <TextBox.InputBindings>
-                                                        <KeyBinding Key="Return" Command="{Binding SaveCommand}"/>
-                                                    </TextBox.InputBindings>
-                                                </TextBox>
-                                                <TextBlock Text="{Binding Unit}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                <Button Content="Enregistrer" Style="{StaticResource PrimaryButton}" Padding="8,3" Command="{Binding SaveCommand}"/>
-                                            </StackPanel>
-                                            <CheckBox Content="Fait" IsChecked="{Binding IsDone, Mode=TwoWay}" VerticalAlignment="Center" Margin="8,0"
-                                                      Visibility="{Binding IsTask, Converter={StaticResource BoolToVis}}"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Section" Binding="{Binding Groupe}" IsReadOnly="True" Width="140"/>
+                            <DataGridTextColumn Header="Ligne" Binding="{Binding Title}" IsReadOnly="True" Width="*" MinWidth="170"/>
+                            <DataGridTextColumn Header="Récurrence" Binding="{Binding RecurrenceName}" IsReadOnly="True" Width="105"/>
+                            <DataGridTextColumn x:Name="ConsumptionColumn" Header="Consommation" Binding="{Binding ConsumptionText}" IsReadOnly="True" Width="130"/>
                             <DataGridTemplateColumn Header="Statut" Width="90">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>

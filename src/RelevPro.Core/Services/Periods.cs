@@ -50,6 +50,41 @@ public static class Periods
         };
     }
 
+    /// <summary>Colonne de saisie d'une vue : une période de la fréquence de la vue.</summary>
+    public sealed record Column(DateTime Start, DateTime End);
+
+    /// <summary>Premier lundi à partir de <paramref name="d"/> (d inclus).</summary>
+    public static DateTime FirstMonday(DateTime d) => d.Date.AddDays((8 - (int)d.DayOfWeek) % 7);
+
+    /// <summary>Colonnes affichées pour la date de référence. Vue hebdomadaire : toutes les semaines (lundis) du mois.
+    /// Autre fréquence : la seule période en cours.</summary>
+    public static List<Column> Columns(Recurrence view, DateTime refDate)
+    {
+        var window = view == Recurrence.Hebdo ? Recurrence.Mensuel : view;
+        var ws = Start(window, refDate);
+        var we = Next(window, ws);
+        if (view != Recurrence.Hebdo) return new() { new Column(ws, we) };
+        var list = new List<Column>();
+        for (var d = FirstMonday(ws); d < we; d = d.AddDays(7)) list.Add(new Column(d, d.AddDays(7)));
+        return list;
+    }
+
+    /// <summary>Fenêtre affichée (mois pour une vue hebdomadaire, sinon la période de la vue).</summary>
+    public static Recurrence Window(Recurrence view) => view == Recurrence.Hebdo ? Recurrence.Mensuel : view;
+
+    /// <summary>La ligne se saisit-elle dans cette colonne ? Une ligne plus lente que la vue (mensuelle dans une vue
+    /// hebdomadaire...) se saisit dans la première colonne de sa période.</summary>
+    public static bool IsActive(Recurrence view, Recurrence line, DateTime columnStart)
+    {
+        if (line <= view) return true;
+        var lineStart = Start(line, columnStart);
+        return columnStart == (view == Recurrence.Hebdo ? FirstMonday(lineStart) : lineStart);
+    }
+
+    public static string ColumnLabel(Recurrence view, DateTime start) => view == Recurrence.Hebdo
+        ? $"S{System.Globalization.ISOWeek.GetWeekOfYear(start)} · {start:dd/MM}"
+        : Label(view, start);
+
     public static string Name(Recurrence r) => r switch
     {
         Recurrence.Hebdo => "Hebdomadaire",

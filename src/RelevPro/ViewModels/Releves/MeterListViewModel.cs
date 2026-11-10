@@ -11,7 +11,8 @@ public sealed record MeterRow(Meter Meter, int Views, int Readings)
 {
     public string Nom => Meter.Nom;
     public string Unite => Meter.Unite;
-    public string Seuil => $"+{Meter.SeuilEcartPct} %";
+    public string Type => Meter.Cumulatif ? "Cumulatif" : "Mesure / niveau";
+    public string Seuil => Meter.SeuilHaut > 0 ? $"Alarme > {Meter.SeuilHaut:0.##}" : "-";
     public string Usage => $"{Views} vue(s), {Readings} relevé(s)";
 }
 
@@ -38,15 +39,17 @@ public partial class MeterListViewModel : ObservableObject
 
     private static bool Edit(string title, Meter m)
     {
-        var nom = m.Nom; var unite = m.Unite; var seuil = m.SeuilEcartPct;
+        var nom = m.Nom; var unite = m.Unite; var seuil = m.SeuilEcartPct; var haut = m.SeuilHaut; var type = m.Cumulatif ? 0 : 1;
         var ok = App.Dialogs.EditFields(title, new List<EditField>
         {
             EditField.Text("Nom du compteur", () => nom, v => nom = v, required: true),
             EditField.Text("Unité (m³, kWh...)", () => unite, v => unite = v),
+            EditField.ComboField("Type", new List<string> { "Compteur cumulatif (index qui augmente, consommation calculée)", "Mesure ou niveau (peut baisser, pas de consommation)" }, () => type, v => type = v),
+            EditField.DecimalField("Seuil d'alarme haut (augmentation max entre 2 relevés, ou valeur max d'une mesure ; 0 = aucun)", () => haut, v => haut = v),
             EditField.IntField("Écart toléré (% au-dessus de l'habituel avant alerte)", () => seuil, v => seuil = v)
         });
         if (!ok || string.IsNullOrWhiteSpace(nom)) return false;
-        m.Nom = nom.Trim(); m.Unite = unite.Trim(); m.SeuilEcartPct = Math.Max(0, seuil);
+        m.Nom = nom.Trim(); m.Unite = unite.Trim(); m.SeuilEcartPct = Math.Max(0, seuil); m.SeuilHaut = Math.Max(0, haut); m.Cumulatif = type == 0;
         return true;
     }
 

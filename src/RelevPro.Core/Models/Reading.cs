@@ -17,6 +17,14 @@ public class Meter : ISiteScoped
 
     /// <summary>Écart toléré, en % au-dessus de la consommation journalière moyenne habituelle, avant alerte.</summary>
     public int SeuilEcartPct { get; set; } = 100;
+
+    /// <summary>Seuil d'alarme haut : augmentation maximale entre deux relevés (compteur cumulatif) ou valeur maximale
+    /// (mesure). 0 = aucun seuil.</summary>
+    public decimal SeuilHaut { get; set; }
+
+    /// <summary>Vrai : index qui ne fait qu'augmenter (consommation calculée). Faux : mesure ou niveau (peut baisser,
+    /// pas de consommation).</summary>
+    public bool Cumulatif { get; set; } = true;
 }
 
 /// <summary>Vue de relevé : un écran de saisie regroupant des lignes (compteurs ou tâches).</summary>
@@ -25,6 +33,13 @@ public class ReadingView : ISiteScoped
     public int Id { get; set; }
     public int SiteId { get; set; }
     public string Nom { get; set; } = string.Empty;
+
+    /// <summary>Famille de regroupement dans le menu (vide = vue non regroupée).</summary>
+    public string Famille { get; set; } = string.Empty;
+
+    /// <summary>Fréquence de la vue : une colonne de saisie par période (semaine, mois...). Les lignes ont la même
+    /// récurrence ou une plus lente (voir <see cref="Services.Periods.IsActive"/>).</summary>
+    public Recurrence Recurrence { get; set; } = Recurrence.Hebdo;
     public int Ordre { get; set; }
     public List<ViewLine> Lines { get; set; } = new();
 }
@@ -43,6 +58,9 @@ public class ViewLine : ISiteScoped
     /// <summary>Libellé de la tâche (vide pour un compteur : le nom du compteur est utilisé).</summary>
     public string Libelle { get; set; } = string.Empty;
     public Recurrence Recurrence { get; set; } = Recurrence.Mensuel;
+
+    /// <summary>Intitulé de section dans la vue (ex. « Gaz », « Traitement chlore »), vide = sans section.</summary>
+    public string Groupe { get; set; } = string.Empty;
     public int Ordre { get; set; }
     public DateTime CreatedOn { get; set; } = DateTime.Today;
 

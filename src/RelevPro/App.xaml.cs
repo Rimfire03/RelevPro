@@ -61,6 +61,7 @@ public partial class App : Application
             }
 
             OpenDatabase(Settings.ResolvedTarget);
+            ApplyFirstRunSite();
         }
         catch (DatabaseVersionException ex)
         {
@@ -84,6 +85,7 @@ public partial class App : Application
             Shutdown(-1);
             return;
         }
+        ApplyFirstRunView();
 
         EmptyDataGridLayout.Register();
         Dialogs = new DialogService();

@@ -41,12 +41,31 @@ public class CoreTests
     }
 
     [Fact]
-    public void Consumption_uses_previous_period_index()
+    public void Consumption_is_next_period_first_reading_minus_first_reading()
     {
-        var rs = new[] { R("2026-01-31", 100), R("2026-02-28", 130), R("2026-03-31", 170) };
-        Assert.Equal(30, ConsumptionService.Consumption(rs, new DateTime(2026, 2, 1), new DateTime(2026, 3, 1)));
-        Assert.Equal(40, ConsumptionService.Consumption(rs, new DateTime(2026, 3, 1), new DateTime(2026, 4, 1)));
-        Assert.Null(ConsumptionService.Consumption(rs, new DateTime(2026, 1, 1), new DateTime(2026, 2, 1)));
+        var rs = new[] { R("2026-01-05", 100), R("2026-01-26", 120), R("2026-02-02", 130), R("2026-02-23", 150), R("2026-03-02", 170) };
+        Assert.Equal(30, ConsumptionService.Consumption(rs, new DateTime(2026, 1, 1), new DateTime(2026, 2, 1)));
+        Assert.Equal(40, ConsumptionService.Consumption(rs, new DateTime(2026, 2, 1), new DateTime(2026, 3, 1)));
+        Assert.Null(ConsumptionService.Consumption(rs, new DateTime(2026, 3, 1), new DateTime(2026, 4, 1))); // un seul relevé
+        Assert.Null(ConsumptionService.Consumption(rs, new DateTime(2025, 12, 1), new DateTime(2026, 1, 1)));
+    }
+
+    [Fact]
+    public void Weekly_view_columns_and_slower_lines()
+    {
+        var cols = Periods.Columns(Recurrence.Hebdo, new DateTime(2026, 1, 20));
+        Assert.Equal(new[] { 5, 12, 19, 26 }, cols.Select(c => c.Start.Day));
+        Assert.Single(Periods.Columns(Recurrence.Mensuel, new DateTime(2026, 11, 10)));
+        // mensuelle dans une vue hebdo : première semaine du mois seulement
+        Assert.True(Periods.IsActive(Recurrence.Hebdo, Recurrence.Mensuel, new DateTime(2026, 1, 5)));
+        Assert.False(Periods.IsActive(Recurrence.Hebdo, Recurrence.Mensuel, new DateTime(2026, 1, 12)));
+        // trimestrielle : première semaine de janvier/avril/juillet/octobre
+        Assert.True(Periods.IsActive(Recurrence.Hebdo, Recurrence.Trimestriel, new DateTime(2026, 4, 6)));
+        Assert.False(Periods.IsActive(Recurrence.Hebdo, Recurrence.Trimestriel, new DateTime(2026, 5, 4)));
+        Assert.True(Periods.IsActive(Recurrence.Hebdo, Recurrence.Hebdo, new DateTime(2026, 5, 4)));
+        // vue mensuelle, ligne annuelle : seulement en janvier
+        Assert.True(Periods.IsActive(Recurrence.Mensuel, Recurrence.Annuel, new DateTime(2026, 1, 1)));
+        Assert.False(Periods.IsActive(Recurrence.Mensuel, Recurrence.Annuel, new DateTime(2026, 2, 1)));
     }
 
     [Fact]

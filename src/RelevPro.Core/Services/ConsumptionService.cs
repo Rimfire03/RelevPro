@@ -4,18 +4,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace RelevPro.Core.Services;
 
-/// <summary>Consommations par mois et par an des compteurs d'une vue : dernier index de la période moins le dernier index
-/// précédant la période (à défaut, premier relevé de la période s'il y en a au moins deux).</summary>
+/// <summary>Consommations par mois et par an des compteurs cumulatifs d'une vue (voir <see cref="Consumption"/>).</summary>
 public static class ConsumptionService
 {
+    /// <summary>Consommation d'une période : relevé du début de la période suivante moins premier relevé de la période
+    /// (règle des relevés papier : on relève en début de période). Période en cours : dernier relevé moins premier.</summary>
     public static decimal? Consumption(IReadOnlyList<MeterReading> ordered, DateTime start, DateTime endExclusive)
     {
-        var inside = ordered.Where(r => r.Date >= start && r.Date < endExclusive).ToList();
-        if (inside.Count == 0) return null;
-        var last = inside[^1];
-        var before = ordered.LastOrDefault(r => r.Date < start);
-        var baseValue = before?.Value ?? (inside.Count > 1 ? inside[0].Value : (decimal?)null);
-        return baseValue is null ? null : last.Value - baseValue.Value;
+        var first = ordered.FirstOrDefault(r => r.Date >= start && r.Date < endExclusive);
+        if (first is null) return null;
+        var end = ordered.FirstOrDefault(r => r.Date >= endExclusive) ?? ordered.Last(r => r.Date < endExclusive);
+        return ReferenceEquals(end, first) ? null : end.Value - first.Value;
     }
 
     public sealed record Row(string Compteur, string Unite, decimal?[] Values, decimal? Total);
@@ -41,7 +40,7 @@ public static class ConsumptionService
     private static List<Row> Build(RelevDbContext db, int viewId, List<(DateTime Start, DateTime End)> periods, bool total)
     {
         var ids = MeterIds(db, viewId);
-        var meters = db.Meters.AsNoTracking().Where(m => ids.Contains(m.Id)).OrderBy(m => m.Ordre).ThenBy(m => m.Nom).ToList();
+        var meters = db.Meters.AsNoTracking().Where(m => ids.Contains(m.Id) && m.Cumulatif).OrderBy(m => m.Ordre).ThenBy(m => m.Nom).ToList();
         var readings = db.MeterReadings.AsNoTracking().Where(r => ids.Contains(r.MeterId)).OrderBy(r => r.Date).ToList().ToLookup(r => r.MeterId);
         return meters.Select(m =>
         {

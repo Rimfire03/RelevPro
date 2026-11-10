@@ -11,13 +11,40 @@ internal static class DatabaseMigrations
     internal static readonly (int Version, string Description, Action<RelevDbContext> Apply)[] All =
     {
         (1, "Schéma initial (compteurs, vues, relevés, tâches)", _ => { }),
+        (2, "Vues : famille et récurrence", AddViewColumns),
     };
+
+    /// <summary>Colonnes ajoutées en v2 (idempotent hors SQLite) : famille et récurrence des vues, groupe des lignes,
+    /// seuil d'alarme et type des compteurs. Recurrence 0 = hebdomadaire : toute ligne existante reste valide dans sa vue.</summary>
+    private static void AddViewColumns(RelevDbContext db)
+    {
+        Add(db, "ReadingViews", "Famille", "TEXT NOT NULL DEFAULT ''", "varchar(200) NOT NULL DEFAULT ''", "varchar(200) NOT NULL DEFAULT ''", "nvarchar(200) NOT NULL DEFAULT ''");
+        Add(db, "ReadingViews", "Recurrence", "INTEGER NOT NULL DEFAULT 0", "integer NOT NULL DEFAULT 0", "int NOT NULL DEFAULT 0", "int NOT NULL DEFAULT 0");
+        Add(db, "ViewLines", "Groupe", "TEXT NOT NULL DEFAULT ''", "varchar(200) NOT NULL DEFAULT ''", "varchar(200) NOT NULL DEFAULT ''", "nvarchar(200) NOT NULL DEFAULT ''");
+        Add(db, "Meters", "SeuilHaut", "TEXT NOT NULL DEFAULT '0'", "numeric(18,4) NOT NULL DEFAULT 0", "decimal(18,4) NOT NULL DEFAULT 0", "decimal(18,4) NOT NULL DEFAULT 0");
+        Add(db, "Meters", "Cumulatif", "INTEGER NOT NULL DEFAULT 1", "boolean NOT NULL DEFAULT true", "tinyint(1) NOT NULL DEFAULT 1", "bit NOT NULL DEFAULT 1");
+    }
+
+    private static void Add(RelevDbContext db, string table, string col, string sqlite, string pg, string maria, string mssql)
+    {
+        var p = db.Provider;
+        if (p != Services.DatabaseProvider.Sqlite && ServerSql.ColumnExists(db, table, col)) return;
+        var (type, add) = p switch
+        {
+            Services.DatabaseProvider.Sqlite => (sqlite, "ADD COLUMN"),
+            Services.DatabaseProvider.PostgreSql => (pg, "ADD COLUMN"),
+            Services.DatabaseProvider.SqlServer => (mssql, "ADD"),
+            _ => (maria, "ADD COLUMN")
+        };
+        db.Database.ExecuteSqlRaw($"ALTER TABLE {ServerSql.Q(p, table)} {add} {ServerSql.Q(p, col)} {type}");
+    }
 
     /// <summary>Dernière version déjà contenue dans le schéma créé par EF Core sur un serveur.</summary>
     internal const int ServerBaselineVersion = 1;
 
     internal static readonly (int Version, string Description, Action<RelevDbContext> Apply)[] ServerMigrations =
     {
+        (2, "Vues : famille et récurrence", AddViewColumns),
     };
 
     internal static IReadOnlyList<(int Version, string Description, Action<RelevDbContext> Apply)> ServerPlan(int fromVersion)

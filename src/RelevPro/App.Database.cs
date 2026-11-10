@@ -26,44 +26,21 @@ public partial class App
         ? "Serveur " + DatabaseProviderInfo.DisplayName(DbFactory.Target.Provider)
         : "Locale (SQLite)";
 
-    /// <summary>Tant qu'aucun fichier de base de données n'existe à l'emplacement configuré (ex. tout
-    /// premier lancement après un clone du dépôt, qui ne contient volontairement aucune DB), propose à
-    /// l'utilisateur d'en créer une nouvelle (vide) ou de choisir un fichier .db existant (ex. une
-    /// sauvegarde). Retourne false si l'utilisateur annule, auquel cas l'application doit se fermer.</summary>
+    /// <summary>Si aucun fichier de base de données n'existe à l'emplacement configuré (premier lancement),
+    /// lance l'assistant de première configuration : nouvelle base (site, première vue) ou base existante (.db).
+    /// Retourne false si l'utilisateur quitte, auquel cas l'application doit se fermer.</summary>
     private static bool EnsureDatabaseSelected()
     {
         if (Settings.UseDatabaseServer) return EnsureServerReachable();
 
-        while (!File.Exists(Settings.ResolvedDatabasePath))
+        // Premier lancement (aucune base à l'emplacement configuré) : assistant TomLine.UI.Wpf.
+        if (!File.Exists(Settings.ResolvedDatabasePath))
         {
-            var choice = MessageBox.Show(
-                $"Aucune base de données trouvée à l'emplacement :\n{Settings.ResolvedDatabasePath}\n\n" +
-                "Oui : créer une nouvelle base de données vide à cet emplacement.\n" +
-                "Non : choisir un fichier de base de données existant (.db).\n" +
-                "Annuler : fermer l'application.",
-                "Base de données introuvable", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-
-            switch (choice)
-            {
-                case MessageBoxResult.Yes:
-                    return true; // EnsureDatabaseUpToDate() créera la base juste après
-
-                case MessageBoxResult.No:
-                    var dialog = new Microsoft.Win32.OpenFileDialog
-                    {
-                        Title = "Choisir une base de données existante",
-                        Filter = "Base de données SQLite (*.db)|*.db|Tous les fichiers (*.*)|*.*"
-                    };
-                    if (dialog.ShowDialog() == true)
-                    {
-                        Settings.DatabasePath = dialog.FileName;
-                        Settings.Save();
-                    }
-                    break; // reboucle : re-teste File.Exists avec le chemin (éventuellement) mis à jour
-
-                default:
-                    return false;
-            }
+            var wizard = new Views.Dialogs.FirstRunWizard(Settings.ResolvedDatabasePath);
+            if (wizard.ShowDialog() != true) return false;
+            if (wizard.Result.ExistingPath is { } existing) Settings.DatabasePath = existing;
+            else { Settings.DatabasePath = wizard.Result.DatabasePath; PendingFirstRun = wizard.Result; }
+            Settings.Save();
         }
 
         return true;
