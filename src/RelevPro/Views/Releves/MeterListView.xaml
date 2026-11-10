@@ -5,11 +5,19 @@
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
             <TextBlock Text="Compteurs" Style="{StaticResource HeaderText}"/>
             <TextBlock Text="Un compteur peut figurer dans plusieurs vues de relevé : ses relevés sont partagés." Style="{StaticResource SectionText}" Margin="0,4,0,10"/>
-            <Button Content="+ Nouveau compteur" Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}" HorizontalAlignment="Left"/>
+            <DockPanel>
+                <Button Content="{Binding EditModeButtonLabel}" Command="{Binding ToggleEditModeCommand}" Style="{StaticResource EditModeButtonStyle}" DockPanel.Dock="Right"/>
+                <StackPanel Orientation="Horizontal" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}">
+                    <Button Content="+ Nouveau compteur" Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Unités…" Style="{StaticResource SecondaryButton}" Command="{Binding ManageUnitsCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Familles…" Style="{StaticResource SecondaryButton}" Command="{Binding ManageFamiliesCommand}"/>
+                </StackPanel>
+            </DockPanel>
         </StackPanel>
         <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="36">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Compteur" Binding="{Binding Nom}" Width="*"/>
+                <DataGridTextColumn Header="Famille" Binding="{Binding Famille}" Width="150"/>
                 <DataGridTextColumn Header="Unité" Binding="{Binding Unite}" Width="90"/>
                 <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="130"/>
                 <DataGridTextColumn Header="Seuil d'alarme" Binding="{Binding Seuil}" Width="120"/>
@@ -18,9 +26,9 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
-                                <Button Content="Modifier" Style="{StaticResource SecondaryButton}" Padding="8,3" Margin="0,0,6,0"
+                                <Button Content="Modifier" Style="{StaticResource SecondaryButton}" Padding="8,3" Margin="0,0,6,0" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}"
                                         Command="{Binding DataContext.EditMeterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"/>
-                                <Button Content="Supprimer" Style="{StaticResource DangerButton}" Padding="8,3"
+                                <Button Content="Supprimer" Style="{StaticResource DangerButton}" Padding="8,3" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}"
                                         Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"/>
                             </StackPanel>
                         </DataTemplate>

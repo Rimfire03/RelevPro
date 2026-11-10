@@ -85,7 +85,7 @@ public sealed record ReadingRow(MeterReading Reading, string Meter, string Unit)
     public string By => Reading.EnteredBy;
 }
 
-public partial class ReadingViewModel : ObservableObject
+public partial class ReadingViewModel : EditableScreenViewModel
 {
     private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
     private static readonly Brush Ok = Freeze("#16A34A"), Late = Freeze("#DC2626"), Pending = Freeze("#D97706"), None = Freeze("#94A3B8");
@@ -343,8 +343,8 @@ public partial class ReadingViewModel : ObservableObject
     [RelayCommand]
     private void AddMeterLine()
     {
-        if (!App.GuardWritable()) return;
-        var meters = App.Db.Meters.AsNoTracking().OrderBy(m => m.Ordre).ThenBy(m => m.Nom).ToList();
+        if (!App.GuardWritable() || !GuardEdit()) return;
+        var meters = App.Db.Meters.AsNoTracking().OrderBy(m => m.Famille).ThenBy(m => m.Ordre).ThenBy(m => m.Nom).ToList();
         if (meters.Count == 0)
         {
             App.Dialogs.ShowMessage("Aucun compteur", "Créez d'abord un compteur dans le menu « Compteurs ».");
@@ -355,7 +355,7 @@ public partial class ReadingViewModel : ObservableObject
         var groupe = LastGroup();
         var fields = new List<EditField>
         {
-            EditField.ComboField("Compteur", meters.Select(m => string.IsNullOrEmpty(m.Unite) ? m.Nom : $"{m.Nom} ({m.Unite})").ToList(), () => index, v => index = v),
+            EditField.ComboField("Compteur", meters.Select(m => (m.Famille.Length > 0 ? m.Famille + " · " : "") + (string.IsNullOrEmpty(m.Unite) ? m.Nom : $"{m.Nom} ({m.Unite})")).ToList(), () => index, v => index = v),
             EditField.ComboField("Récurrence de saisie", AllowedNames, () => rec, v => rec = v),
             EditField.Text("Section (regroupe les lignes, facultatif)", () => groupe, v => groupe = v)
         };
@@ -372,7 +372,7 @@ public partial class ReadingViewModel : ObservableObject
     [RelayCommand]
     private void AddTaskLine()
     {
-        if (!App.GuardWritable()) return;
+        if (!App.GuardWritable() || !GuardEdit()) return;
         var label = string.Empty;
         var rec = 0;
         var groupe = LastGroup();
@@ -399,7 +399,7 @@ public partial class ReadingViewModel : ObservableObject
 
     internal void EditLine(LineRow row)
     {
-        if (!App.GuardWritable()) return;
+        if (!App.GuardWritable() || !GuardEdit()) return;
         var line = App.Db.ViewLines.First(l => l.Id == row.Line.Id);
         var label = line.Libelle;
         var groupe = line.Groupe;
@@ -419,7 +419,7 @@ public partial class ReadingViewModel : ObservableObject
 
     internal void DeleteLine(LineRow row)
     {
-        if (!App.GuardWritable()) return;
+        if (!App.GuardWritable() || !GuardEdit()) return;
         if (!App.Dialogs.ShowConfirm("Retirer la ligne",
                 $"Retirer « {row.Title} » de cette vue ? Les relevés du compteur sont conservés (et restent visibles dans les autres vues)."))
             return;
@@ -433,7 +433,7 @@ public partial class ReadingViewModel : ObservableObject
     [RelayCommand]
     private void DeleteReading(ReadingRow row)
     {
-        if (!App.GuardWritable()) return;
+        if (!App.GuardWritable() || !GuardEdit()) return;
         if (!App.Dialogs.ShowConfirm("Supprimer le relevé",
                 $"Supprimer le relevé de « {row.Meter} » du {row.DateText} ({row.ValueText} {row.Unit}) ? Il disparaît aussi des autres vues."))
             return;

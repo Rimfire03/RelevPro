@@ -23,7 +23,6 @@
             <DataTemplate DataType="{x:Type vmr:ReadingViewModel}"><viewsr:ReadingView/></DataTemplate>
             <DataTemplate DataType="{x:Type vmr:ReadingViewListViewModel}"><viewsr:ReadingViewListView/></DataTemplate>
             <DataTemplate DataType="{x:Type vmr:MeterListViewModel}"><viewsr:MeterListView/></DataTemplate>
-            <DataTemplate DataType="{x:Type vmr:NotificationsViewModel}"><viewsr:NotificationsView/></DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -9,7 +9,7 @@
     <AssemblyName>RelevPro</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Company>TomLine prod&amp;co</Company>
     <Copyright>Â© TomLine prod&amp;co by Thomas Guidez</Copyright>
   </PropertyGroup>
@@ -25,7 +25,8 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
-    <PackageReference Include="TomLine.UI.Wpf" Version="1.4.0" />
+    <PackageReference Include="TomLine.UI.Wpf" Version="1.5.0" />
+    <PackageReference Include="TomLine.Notifications" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>

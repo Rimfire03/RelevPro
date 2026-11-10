@@ -16,8 +16,9 @@
                         <Button Content="▶" Style="{StaticResource SecondaryButton}" Command="{Binding NextPeriodCommand}" Margin="6,0,12,0" Padding="10,3"/>
                         <DatePicker SelectedDate="{Binding RefDate}" Width="130" Margin="0,0,8,0"/>
                         <Button Content="Aujourd'hui" Style="{StaticResource SecondaryButton}" Command="{Binding TodayCommand}" Margin="0,0,24,0"/>
-                        <Button Content="+ Compteur" Style="{StaticResource PrimaryButton}" Command="{Binding AddMeterLineCommand}" Margin="0,0,8,0"/>
-                        <Button Content="+ Tâche" Style="{StaticResource PrimaryButton}" Command="{Binding AddTaskLineCommand}"/>
+                        <Button Content="+ Compteur" Style="{StaticResource PrimaryButton}" Command="{Binding AddMeterLineCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
+                        <Button Content="+ Tâche" Style="{StaticResource PrimaryButton}" Command="{Binding AddTaskLineCommand}" Margin="0,0,24,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
+                        <Button Content="{Binding EditModeButtonLabel}" Command="{Binding ToggleEditModeCommand}" Style="{StaticResource EditModeButtonStyle}" Padding="12,5"/>
                     </WrapPanel>
                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,8,0,0" Foreground="{StaticResource BrushPrimary}" TextWrapping="Wrap"/>
                     <!-- Colonnes de saisie (une par semaine / période) ajoutées dans ReadingView.xaml.cs, entre « Récurrence » et « Consommation ». -->
@@ -38,7 +39,7 @@
                             <DataGridTemplateColumn Width="170">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
+                                        <StackPanel Orientation="Horizontal" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
                                             <Button Content="Modifier" Style="{StaticResource SecondaryButton}" Padding="8,3" Margin="0,0,6,0" Command="{Binding EditCommand}"/>
                                             <Button Content="Retirer" Style="{StaticResource DangerButton}" Padding="8,3" Command="{Binding DeleteCommand}"/>
                                         </StackPanel>
@@ -80,7 +81,7 @@
                             <DataGridTemplateColumn Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="Supprimer" Style="{StaticResource DangerButton}" Padding="8,3"
+                                        <Button Content="Supprimer" Style="{StaticResource DangerButton}" Padding="8,3" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}"
                                                 Command="{Binding DataContext.DeleteReadingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"/>
                                     </DataTemplate>

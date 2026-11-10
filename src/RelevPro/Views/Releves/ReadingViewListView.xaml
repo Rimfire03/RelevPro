@@ -5,7 +5,10 @@
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
             <TextBlock Text="Vues de relevé" Style="{StaticResource HeaderText}"/>
             <TextBlock Text="Chaque vue a une fréquence (hebdomadaire, mensuelle...) et regroupe des compteurs à relever et des tâches à cocher. Les vues d'une même famille sont regroupées dans le menu." Style="{StaticResource SectionText}" Margin="0,4,0,10"/>
-            <Button Content="+ Nouvelle vue" Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}" HorizontalAlignment="Left"/>
+            <DockPanel>
+                <Button Content="{Binding EditModeButtonLabel}" Command="{Binding ToggleEditModeCommand}" Style="{StaticResource EditModeButtonStyle}" DockPanel.Dock="Right"/>
+                <Button Content="+ Nouvelle vue" Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}" HorizontalAlignment="Left" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
+            </DockPanel>
         </StackPanel>
         <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="36">
             <DataGrid.Columns>
@@ -19,9 +22,9 @@
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="Ouvrir" Style="{StaticResource PrimaryButton}" Padding="8,3" Margin="0,0,6,0"
                                         Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"/>
-                                <Button Content="Modifier" Style="{StaticResource SecondaryButton}" Padding="8,3" Margin="0,0,6,0"
+                                <Button Content="Modifier" Style="{StaticResource SecondaryButton}" Padding="8,3" Margin="0,0,6,0" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}"
                                         Command="{Binding DataContext.RenameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"/>
-                                <Button Content="Supprimer" Style="{StaticResource DangerButton}" Padding="8,3"
+                                <Button Content="Supprimer" Style="{StaticResource DangerButton}" Padding="8,3" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}"
                                         Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"/>
                             </StackPanel>
                         </DataTemplate>

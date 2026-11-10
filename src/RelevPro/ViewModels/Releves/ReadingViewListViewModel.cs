@@ -17,7 +17,7 @@ public sealed record ViewRow(ReadingView View, int MeterLines, int TaskLines)
 }
 
 /// <summary>Page du menu « Relevés » : création, renommage et suppression des vues de relevé.</summary>
-public partial class ReadingViewListViewModel : ObservableObject
+public partial class ReadingViewListViewModel : EditableScreenViewModel
 {
     private readonly MainViewModel _main;
     public ObservableCollection<ViewRow> Rows { get; } = new();
@@ -56,7 +56,7 @@ public partial class ReadingViewListViewModel : ObservableObject
     [RelayCommand]
     private void Add()
     {
-        if (!App.GuardWritable()) return;
+        if (!App.GuardWritable() || !GuardEdit()) return;
         var v = new ReadingView { Ordre = (App.Db.ReadingViews.Max(x => (int?)x.Ordre) ?? -1) + 1 };
         if (!Edit("Nouvelle vue de relevé", v)) return;
         App.Db.ReadingViews.Add(v);
@@ -68,7 +68,7 @@ public partial class ReadingViewListViewModel : ObservableObject
     [RelayCommand]
     private void Rename(ViewRow row)
     {
-        if (!App.GuardWritable()) return;
+        if (!App.GuardWritable() || !GuardEdit()) return;
         var v = App.Db.ReadingViews.First(x => x.Id == row.View.Id);
         if (!Edit("Modifier la vue", v)) { App.Db.Entry(v).Reload(); return; }
         // une ligne n'est jamais plus rapide que sa vue
@@ -81,7 +81,7 @@ public partial class ReadingViewListViewModel : ObservableObject
     [RelayCommand]
     private void Delete(ViewRow row)
     {
-        if (!App.GuardWritable()) return;
+        if (!App.GuardWritable() || !GuardEdit()) return;
         if (!App.Dialogs.ShowConfirm("Supprimer la vue",
                 $"Supprimer la vue « {row.Nom} » et ses lignes ? Les compteurs et leurs relevés sont conservés ; les tâches cochées de cette vue sont perdues."))
             return;

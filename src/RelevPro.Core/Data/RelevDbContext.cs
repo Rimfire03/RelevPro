@@ -30,6 +30,7 @@ public class RelevDbContext : DbContext
     public DbSet<SharedAsset> SharedAssets => Set<SharedAsset>();
     public DbSet<Meter> Meters => Set<Meter>();
     public DbSet<ReadingView> ReadingViews => Set<ReadingView>();
+    public DbSet<CatalogItem> CatalogItems => Set<CatalogItem>();
     public DbSet<ViewLine> ViewLines => Set<ViewLine>();
     public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
     public DbSet<TaskCompletion> TaskCompletions => Set<TaskCompletion>();
@@ -91,6 +92,8 @@ public class RelevDbContext : DbContext
 
         modelBuilder.Entity<ReadingView>().Property(v => v.Famille).HasMaxLength(200);
         modelBuilder.Entity<ViewLine>().Property(l => l.Groupe).HasMaxLength(200);
+        modelBuilder.Entity<Meter>().Property(m => m.Famille).HasMaxLength(200);
+        modelBuilder.Entity<CatalogItem>().Property(c => c.Nom).HasMaxLength(100);
         modelBuilder.Entity<Meter>().Property(m => m.SeuilHaut).HasPrecision(18, 4);
         modelBuilder.Entity<ViewLine>().HasOne(l => l.ReadingView).WithMany(v => v.Lines).HasForeignKey(l => l.ReadingViewId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<ViewLine>().HasOne(l => l.Meter).WithMany().HasForeignKey(l => l.MeterId).OnDelete(DeleteBehavior.Cascade);

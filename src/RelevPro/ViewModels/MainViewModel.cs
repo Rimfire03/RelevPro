@@ -51,7 +51,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _viewsMenu = new NavigationItem("Relevés", "📋", () => new ReadingViewListViewModel(this)) { IsExpanded = true };
         SettingsItem = new NavigationItem("Paramètres", "⚙", () => new SettingsViewModel(this));
-        NotificationsItem = new NavigationItem("Notifications", "🔔", () => new NotificationsViewModel(this));
+        NotificationsItem = new NavigationItem("Notifications", "🔔", () => new TomLine.UI.Wpf.Controls.NotificationCenterView(CenterNotifications, OpenFromNotification,
+            "Saisies en retard, saisies à faire sur la période en cours et valeurs forcées récemment."));
 
         NavigationItems.Add(_viewsMenu);
         NavigationItems.Add(new NavigationItem("Compteurs", "🔢", () => new MeterListViewModel(this)));
@@ -137,6 +138,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     public void ShowNotifications() => SelectedItem = NotificationsItem;
+
+    /// <summary>Alertes au format du centre de notifications commun (TomLine.Notifications) : seules les saisies en retard
+    /// comptent dans la cloche ; les saisies à faire et les valeurs forcées sont des informations.</summary>
+    private IReadOnlyList<TomLine.Notifications.AppNotification> CenterNotifications()
+    {
+        var items = NotificationService.Build(App.Db, DateTime.Today).Select(n => new TomLine.Notifications.AppNotification(
+            $"{n.Level}:{n.ViewId}:{n.Title}",
+            n.Level switch { Core.Services.NotificationLevel.Late => TomLine.Notifications.NotificationLevel.Alert, Core.Services.NotificationLevel.Anomaly => TomLine.Notifications.NotificationLevel.Warning, _ => TomLine.Notifications.NotificationLevel.Info },
+            n.Title,
+            n.ViewName.Length > 0 ? $"{n.ViewName} - {n.Detail}" : n.Detail,
+            n.ViewId != 0 ? "view:" + n.ViewId : "",
+            CountsInBadge: n.Level == Core.Services.NotificationLevel.Late));
+        return TomLine.Notifications.NotificationCenter.Sort(items);
+    }
+
+    private void OpenFromNotification(string target)
+    {
+        if (target.StartsWith("view:") && int.TryParse(target[5..], out var id)) OpenView(id);
+    }
 
     public void OpenView(int viewId)
     {

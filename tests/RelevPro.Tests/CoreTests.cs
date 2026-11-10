@@ -93,4 +93,53 @@ public class CoreTests
         }
         finally { try { File.Delete(path); } catch { } }
     }
+
+    [Fact]
+    public void Catalog_defaults_rename_and_delete_update_meters()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            var f = new DbContextFactory(path);
+            f.EnsureDatabaseUpToDate("test");
+            using var db = f.Create();
+            db.Meters.Add(new Meter { Nom = "Gaz", Unite = "Nm3", Famille = "Gaz" });
+            db.SaveChanges();
+            CatalogService.EnsureDefaults(db);
+            Assert.Contains("kWh", CatalogService.Names(db, CatalogKind.Unite));
+            Assert.Contains("Nm3", CatalogService.Names(db, CatalogKind.Unite)); // unité déjà saisie sur un compteur
+            Assert.Contains("Chauffage", CatalogService.Names(db, CatalogKind.Famille));
+            Assert.False(CatalogService.Add(db, CatalogKind.Unite, "KWH")); // doublon, casse ignorée
+
+            Assert.True(CatalogService.Rename(db, CatalogKind.Unite, "Nm3", "m³ normaux"));
+            Assert.Equal("m³ normaux", db.Meters.Single().Unite);
+            CatalogService.Delete(db, CatalogKind.Famille, "Gaz");
+            Assert.Equal("", db.Meters.Single().Famille);
+        }
+        finally { try { File.Delete(path); } catch { } }
+    }
+
+    [Fact]
+    public void Old_v2_database_is_migrated_to_catalogs()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            var f = new DbContextFactory(path);
+            f.EnsureDatabaseUpToDate("test");
+            using (var db = f.Create())
+            {
+                db.Database.ExecuteSqlRaw("DROP TABLE CatalogItems");
+                db.Database.ExecuteSqlRaw("ALTER TABLE Meters DROP COLUMN Famille");
+                db.Database.ExecuteSqlRaw("PRAGMA user_version = 2");
+            }
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            new DbContextFactory(path).EnsureDatabaseUpToDate("test");
+            using var db2 = new DbContextFactory(path).Create();
+            db2.Meters.Add(new Meter { Nom = "X", Famille = "Eau" }); db2.SaveChanges();
+            CatalogService.EnsureDefaults(db2);
+            Assert.Contains("Eau", CatalogService.Names(db2, CatalogKind.Famille));
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); try { File.Delete(path); } catch { } }
+    }
 }

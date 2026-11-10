@@ -38,9 +38,13 @@ public partial class App
         {
             var wizard = new Views.Dialogs.FirstRunWizard(Settings.ResolvedDatabasePath);
             if (wizard.ShowDialog() != true) return false;
-            if (wizard.Result.ExistingPath is { } existing) Settings.DatabasePath = existing;
-            else { Settings.DatabasePath = wizard.Result.DatabasePath; PendingFirstRun = wizard.Result; }
+            var result = wizard.Result;
+            if (result.ExistingPath is { } existing) Settings.DatabasePath = existing;
+            else if (result.Server is { } server) { Settings.UseDatabaseServer = true; Settings.DatabaseServer = server; }
+            else Settings.DatabasePath = result.DatabasePath;
+            if (result.IsNewDatabase) PendingFirstRun = result;
             Settings.Save();
+            if (Settings.UseDatabaseServer) return true; // connexion déjà testée dans l'assistant
         }
 
         return true;
