@@ -33,6 +33,16 @@ public partial class App : Application
             ex.Handled = true;
         };
 
+        // Mode assistant de mise à jour portable : la nouvelle version, lancée depuis le dossier temporaire, remplace les
+        // fichiers de l'installation puis relance l'application (aucune fenêtre, ni CLUF ni licence).
+        if (e.Args.Length > 0 && e.Args[0] == Core.Services.UpdateService.ApplyUpdateArg)
+        {
+            Core.Services.UpdateService.RunApplyHelper(e.Args);
+            Shutdown(0);
+            return;
+        }
+        Core.Services.UpdateService.CleanOldUpdateFolders();
+
         // Par défaut (OnLastWindowClose), fermer la fenêtre de saisie de la licence - avant que
         // MainWindow existe - déclenche la fermeture de toute l'application, puisque c'est alors
         // la seule fenêtre ouverte. Repassé à OnLastWindowClose juste après l'ouverture de

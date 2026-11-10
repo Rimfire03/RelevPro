@@ -182,7 +182,7 @@ public class UpdateService
         // les données (RelevData\relevpro.db, réglages) et la licence (registre) ne sont pas touchées.
         if (zipPath.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
         {
-            RunDetachedMsi(Environment.ProcessId, zipPath, currentExePath, tempDir);
+            RunDetachedMsi(zipPath);
             return;
         }
 
@@ -202,80 +202,71 @@ public class UpdateService
         if (!File.Exists(Path.Combine(extractDir, exeName)))
             throw new InvalidOperationException($"{exeName} introuvable à la racine de l'archive téléchargée.");
 
-        RunDetachedReplace(currentPid, extractDir, installDir, currentExePath, tempDir);
+        RunDetachedReplace(currentPid, extractDir, installDir, currentExePath);
     }
 
-    /// <summary>Échappe une chaîne pour une chaîne PowerShell entre apostrophes (seul caractère spécial à
-    /// doubler dans ce contexte).</summary>
-    private static string EscapeSingleQuoted(string value) => value.Replace("'", "''");
+    /// <summary>Argument de ligne de commande qui fait agir l'application comme assistant de remplacement.</summary>
+    public const string ApplyUpdateArg = "--apply-update";
 
-    /// <summary>Même principe que <see cref="RunDetachedReplace"/> : processus PowerShell détaché qui attend la
-    /// fermeture de l'application, lance <c>msiexec /i</c> élevé (mise à jour majeure du paquet), puis relance
-    /// l'application et nettoie.</summary>
-    private static void RunDetachedMsi(int pid, string msiPath, string targetExePath, string tempDir)
+    /// <summary>Version installée (MSI) : lance <c>msiexec</c> élevé (UAC) sur le paquet téléchargé ; l'appelant ferme
+    /// l'application aussitôt. Aucun interpréteur de commandes : un PowerShell masqué est classé « stager » par les antivirus.</summary>
+    private static void RunDetachedMsi(string msiPath)
     {
-        var script = $$"""
-            $ErrorActionPreference = 'SilentlyContinue'
-            while (Get-Process -Id {{pid}} -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 500 }
-            Start-Process -FilePath 'msiexec.exe' -ArgumentList '/i "{{EscapeSingleQuoted(msiPath)}}" /passive /norestart' -Verb RunAs -Wait
-            Start-Process -FilePath '{{EscapeSingleQuoted(targetExePath)}}'
-            Start-Sleep -Seconds 2
-            Remove-Item -Path '{{EscapeSingleQuoted(tempDir)}}' -Recurse -Force
-            """;
-
-        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
         Process.Start(new ProcessStartInfo
         {
-            FileName = "powershell.exe",
-            Arguments = $"-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {encoded}",
-            UseShellExecute = false,
-            CreateNoWindow = true
+            FileName = "msiexec.exe",
+            Arguments = $"/i \"{msiPath}\" /passive /norestart",
+            UseShellExecute = true,
+            Verb = "runas"
         });
     }
 
-    private static void RunDetachedReplace(int pid, string extractDir, string installDir, string targetExePath, string tempDir)
+    /// <summary>Version portable : lance la NOUVELLE version, déjà décompressée dans le dossier temporaire, en mode
+    /// assistant (<see cref="ApplyUpdateArg"/>) : elle attend la fermeture de l'application, copie l'archive par-dessus
+    /// le dossier d'installation et relance l'application (voir <see cref="RunApplyHelper"/>). Ni PowerShell ni script.</summary>
+    private static void RunDetachedReplace(int pid, string extractDir, string installDir, string targetExePath)
     {
-        var extractDirEsc = EscapeSingleQuoted(extractDir);
-        var installDirEsc = EscapeSingleQuoted(installDir);
-        var targetExePathEsc = EscapeSingleQuoted(targetExePath);
-        var tempDirEsc = EscapeSingleQuoted(tempDir);
+        var helper = Path.Combine(extractDir, Path.GetFileName(targetExePath));
+        var psi = new ProcessStartInfo { FileName = helper, WorkingDirectory = extractDir, UseShellExecute = false, CreateNoWindow = true };
+        foreach (var a in new[] { ApplyUpdateArg, pid.ToString(), extractDir, installDir, targetExePath }) psi.ArgumentList.Add(a);
+        Process.Start(psi);
+    }
 
-        // Aucun fichier de script n'est écrit sur disque (contrairement à une première version basée sur
-        // un .bat) : la commande vit entièrement dans l'argument -EncodedCommand du processus PowerShell
-        // détaché, donc rien ne peut être "supprimé sous ses propres pieds" pendant son exécution.
-        var script = $$"""
-            $ErrorActionPreference = 'SilentlyContinue'
-            while (Get-Process -Id {{pid}} -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 500 }
+    /// <summary>Corps du mode assistant : args = [--apply-update, pid, dossier extrait, dossier d'installation, exécutable à relancer].
+    /// Attend la fin du processus <c>pid</c>, copie tout (avec nouvelles tentatives tant que des fichiers sont verrouillés),
+    /// relance l'application. Le dossier temporaire est nettoyé au lancement suivant (<see cref="CleanOldUpdateFolders"/>).</summary>
+    public static void RunApplyHelper(string[] args)
+    {
+        if (args.Length < 5 || !int.TryParse(args[1], out var pid)) return;
+        var (extractDir, installDir, exe) = (args[2], args[3], args[4]);
+        try { Process.GetProcessById(pid).WaitForExit(60_000); } catch (ArgumentException) { /* déjà terminé */ } catch { }
 
-            $ErrorActionPreference = 'Stop'
-            $attempts = 0
-            while ($true) {
-                try {
-                    Copy-Item -Path (Join-Path '{{extractDirEsc}}' '*') -Destination '{{installDirEsc}}' -Recurse -Force
-                    break
-                } catch {
-                    $attempts++
-                    if ($attempts -ge 15) { throw }
-                    Start-Sleep -Seconds 1
-                }
-            }
-
-            Start-Process -FilePath '{{targetExePathEsc}}'
-
-            $ErrorActionPreference = 'SilentlyContinue'
-            Start-Sleep -Seconds 2
-            Remove-Item -Path '{{tempDirEsc}}' -Recurse -Force
-            """;
-
-        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
-
-        Process.Start(new ProcessStartInfo
+        for (var attempt = 1; ; attempt++)
         {
-            FileName = "powershell.exe",
-            Arguments = $"-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {encoded}",
-            UseShellExecute = false,
-            CreateNoWindow = true
-        });
+            try { CopyAll(extractDir, installDir); break; }
+            catch when (attempt < 15) { Thread.Sleep(1000); }
+            catch { return; }
+        }
+        Process.Start(new ProcessStartInfo { FileName = exe, WorkingDirectory = installDir, UseShellExecute = true });
+    }
+
+    private static void CopyAll(string from, string to)
+    {
+        Directory.CreateDirectory(to);
+        foreach (var file in Directory.GetFiles(from)) File.Copy(file, Path.Combine(to, Path.GetFileName(file)), overwrite: true);
+        foreach (var dir in Directory.GetDirectories(from)) CopyAll(dir, Path.Combine(to, Path.GetFileName(dir)));
+    }
+
+    /// <summary>Supprime les dossiers de mise à jour restés dans %TEMP% (plus de 10 minutes) ; sans erreur.</summary>
+    public static void CleanOldUpdateFolders()
+    {
+        try
+        {
+            foreach (var d in Directory.GetDirectories(Path.GetTempPath(), "RelevPro-Update-*"))
+                if (DateTime.UtcNow - Directory.GetCreationTimeUtc(d) > TimeSpan.FromMinutes(10))
+                    try { Directory.Delete(d, recursive: true); } catch { }
+        }
+        catch { }
     }
 
     // Comparaison de versions commune (suffixe de canal « -dev » ignoré) : voir TomLine.AppInfo.
