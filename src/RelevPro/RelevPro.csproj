@@ -9,7 +9,7 @@
     <AssemblyName>RelevPro</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <Version>1.2.1</Version>
+    <Version>1.2.2</Version>
     <Company>TomLine prod&amp;co</Company>
     <Copyright>Â© TomLine prod&amp;co by Thomas Guidez</Copyright>
   </PropertyGroup>

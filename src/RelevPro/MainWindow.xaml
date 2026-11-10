@@ -175,13 +175,11 @@
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
+                        <!-- Cloche commune TomLine.UI.Wpf (NotificationBell) : « 🔔 » puis le nombre d'alertes, en ambre
+                             tant qu'il y en a et que la page n'est pas ouverte (MainWindow.xaml.cs). -->
                         <StackPanel Orientation="Horizontal" Margin="14,7">
-                            <TextBlock Text="{Binding NotificationsItem.Icon}" Margin="0,0,10,0" FontSize="14" VerticalAlignment="Center" Foreground="#CBD5E1"/>
+                            <ContentControl x:Name="NotificationNav" Content="🔔" FontSize="14" Foreground="#CBD5E1" Margin="0,0,10,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding NotificationsItem.Title}" FontSize="13" VerticalAlignment="Center" Foreground="#CBD5E1"/>
-                            <Border Background="#DC2626" CornerRadius="9" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding HasNotificationBadge, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="{Binding NotificationBadge}" FontSize="11" FontWeight="Bold" Foreground="White"/>
-                            </Border>
                         </StackPanel>
                     </Border>
                     <!-- Séparateur entre le menu défilant (modules) et la section épinglée Paramètres/Aide ci-dessus. -->

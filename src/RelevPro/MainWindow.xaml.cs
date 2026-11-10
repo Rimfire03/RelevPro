@@ -19,7 +19,20 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        DataContextChanged += (_, e) =>
+        {
+            if (e.NewValue is not ViewModels.MainViewModel vm) return;
+            vm.PropertyChanged += (_, a) =>
+            {
+                if (a.PropertyName is nameof(ViewModels.MainViewModel.NotificationBadge) or nameof(ViewModels.MainViewModel.SelectedItem)) ApplyBell(vm);
+            };
+            ApplyBell(vm);
+        };
     }
+
+    /// <summary>Cloche du core TomLine : nombre d'alertes (saisies en retard), ambre tant que la page n'est pas ouverte.</summary>
+    private void ApplyBell(ViewModels.MainViewModel vm) =>
+        TomLine.UI.Wpf.Controls.NotificationBell.Apply(NotificationNav, vm.NotificationBadge, vm.SelectedItem == vm.NotificationsItem);
 
     /// <summary>TreeView.SelectedItem est en lecture seule (pas de binding direct possible) : on répercute
     /// la sélection sur le ViewModel manuellement, comme le faisait le binding bidirectionnel de l'ancienne
