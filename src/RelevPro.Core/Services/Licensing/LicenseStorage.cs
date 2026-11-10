@@ -5,7 +5,7 @@ namespace RelevPro.Core.Services.Licensing;
 
 internal static class Nf8
 {
-    private static readonly string D0 = Yx4.Z("HDM2Lig/HjsuOw==");
+    private static readonly string D0 = Yx4.Z("CD82PyweOy47");
     private static readonly string D1 = Yx4.Z("NjM5PzQpP3Q+Oy4=");
     private static readonly string D2 = Yx4.Z("NjM5PzQ5P3QzNDM=");
 
