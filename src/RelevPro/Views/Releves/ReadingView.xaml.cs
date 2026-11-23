@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using RelevPro.Services;
 using RelevPro.ViewModels.Releves;
 
 namespace RelevPro.Views.Releves;
@@ -41,6 +42,35 @@ public partial class ReadingView : UserControl
         }
     }
 
+    /// <summary>Entrée : la case de la même colonne, ligne suivante (saisissable), prend le focus. La sauvegarde est différée
+    /// puis recharge les lignes (nouveaux contrôles) : on attend donc l'inactivité avant de chercher la case suivante.</summary>
+    private static void FocusNextRow(TextBox tb)
+    {
+        var grid = tb.FindAncestor<DataGrid>();
+        var row = tb.FindAncestor<DataGridRow>();
+        var column = tb.FindAncestor<DataGridCell>()?.Column;
+        if (grid is null || row is null || column is null) return;
+        var start = row.GetIndex() + 1;
+        grid.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, new Action(() =>
+        {
+            for (var n = start; n < grid.Items.Count; n++)
+            {
+                grid.ScrollIntoView(grid.Items[n]);
+                grid.UpdateLayout();
+                if (grid.ItemContainerGenerator.ContainerFromIndex(n) is not DataGridRow r || column.GetCellContent(r) is not { } content) continue;
+                if (FindBox(content) is { IsVisible: true, IsEnabled: true } box) { box.Focus(); box.SelectAll(); return; }
+            }
+        }));
+    }
+
+    private static TextBox? FindBox(DependencyObject d)
+    {
+        if (d is TextBox t) return t;
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(d); i++)
+            if (FindBox(VisualTreeHelper.GetChild(d, i)) is { } f) return f;
+        return null;
+    }
+
     private static DataTemplate CellTemplate(int i)
     {
         var grid = new FrameworkElementFactory(typeof(Grid));
@@ -57,7 +87,10 @@ public partial class ReadingView : UserControl
         box.SetValue(FrameworkElement.MinHeightProperty, 0.0);
         box.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler((s, e) =>
         {
-            if (e.Key == Key.Enter && s is TextBox tb) tb.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            if (e.Key != Key.Enter || s is not TextBox tb) return;
+            tb.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            FocusNextRow(tb);
+            e.Handled = true;
         }));
         grid.AppendChild(box);
 
