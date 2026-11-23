@@ -264,7 +264,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
     {
         var rows = ConsumptionService.Monthly(App.Db, _viewId, SelectedYear);
         var cols = new List<string> { "Compteur", "Unité" };
-        cols.AddRange(Enumerable.Range(1, 12).Select(m => Fr.DateTimeFormat.GetAbbreviatedMonthName(m)));
+        cols.AddRange(Enumerable.Range(1, 12).Select(m => Fr.DateTimeFormat.GetAbbreviatedMonthName(m).TrimEnd('.'))); // un point dans le nom de colonne casse la liaison de la grille (cellules vides)
         cols.Add("Total");
         MonthlyTable = Table(cols, rows.Select(r => new object?[] { r.Compteur, r.Unite }.Concat(r.Values.Cast<object?>()).Append(r.Total).ToArray()));
     }
