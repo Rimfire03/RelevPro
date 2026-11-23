@@ -320,7 +320,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
                        (likelyTour ? "Le relevé précédent était proche de la capacité : probablement un TOUR complet.\n\n" : "Le relevé précédent était loin de la capacité : probablement un COMPTEUR CHANGÉ.\n\n");
             tour = App.Dialogs.ShowConfirm($"Le compteur a-t-il fait un tour ? - {meter.Nom}",
                 head + $"Oui : tour complet (repassé à 0 après {capacity.ToString("0.####", Fr)}) ; consommation de l'écart : {(capacity - prevR.Value + value).ToString("0.####", Fr)} {meter.Unite}.\n" +
-                "Non : autre cause (compteur changé, erreur de saisie).\n\nLa capacité se règle dans « Compteurs » (par défaut : puissance de 10 au-dessus du plus grand relevé).");
+                "Non : autre cause (compteur changé, erreur de saisie).\n\nLa capacité se règle dans la fiche du compteur (mode édition, par défaut : puissance de 10 au-dessus du plus grand relevé).");
             if (!tour)
             {
                 replaced = App.Dialogs.ShowConfirm($"Compteur changé ? - {meter.Nom}",
@@ -395,30 +395,21 @@ public partial class ReadingViewModel : EditableScreenViewModel
     private void AddMeterLine()
     {
         if (!App.GuardWritable() || !GuardEdit()) return;
-        var meters = App.Db.Meters.AsNoTracking().Where(m => !m.Arrete).OrderBy(m => m.Famille).ThenBy(m => m.Ordre).ThenBy(m => m.Nom).ToList();
-        if (meters.Count == 0)
-        {
-            App.Dialogs.ShowMessage("Aucun compteur", "Créez d'abord un compteur dans le menu « Compteurs ».");
-            return;
-        }
-        var index = 0;
         var rec = 0;
         var groupe = LastGroup();
-        var fields = new List<EditField>
+        var meter = new Meter { Ordre = (App.Db.Meters.Max(x => (int?)x.Ordre) ?? -1) + 1 };
+        var extra = new[]
         {
-            EditField.ComboField("Compteur", meters.Select(m => (m.Famille.Length > 0 ? m.Famille + " · " : "") + (string.IsNullOrEmpty(m.Unite) ? m.Nom : $"{m.Nom} ({m.Unite})")).ToList(), () => index, v => index = v),
             EditField.ComboField("Récurrence de saisie", AllowedNames, () => rec, v => rec = v),
             EditField.Text("Section (regroupe les lignes, facultatif)", () => groupe, v => groupe = v)
         };
-        if (!App.Dialogs.EditFields("Ajouter un compteur à la vue", fields)) return;
-        var meter = meters[Math.Clamp(index, 0, meters.Count - 1)];
-        if (App.Db.ViewLines.Any(l => l.ReadingViewId == _viewId && l.MeterId == meter.Id))
-        {
-            App.Dialogs.ShowMessage("Déjà présent", $"« {meter.Nom} » figure déjà dans cette vue.");
-            return;
-        }
-        AddLine(new ViewLine { Kind = LineKind.Compteur, MeterId = meter.Id, Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)], Groupe = groupe.Trim() });
+        if (!MeterEditor.Edit("Nouveau compteur", meter, extra)) return;
+        // le compteur appartient à cette vue seule : ses relevés ne sont pas partagés
+        AddLine(new ViewLine { Kind = LineKind.Compteur, Meter = meter, Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)], Groupe = groupe.Trim() });
     }
+
+    [RelayCommand] private void ManageUnits() { if (!GuardEdit()) return; new Views.Dialogs.CatalogWindow(CatalogKind.Unite, "Catalogue des unités") { Owner = Application.Current.MainWindow }.ShowDialog(); }
+    [RelayCommand] private void ManageFamilies() { if (!GuardEdit()) return; new Views.Dialogs.CatalogWindow(CatalogKind.Famille, "Familles de compteurs") { Owner = Application.Current.MainWindow }.ShowDialog(); }
 
     [RelayCommand]
     private void AddTaskLine()
@@ -459,7 +450,12 @@ public partial class ReadingViewModel : EditableScreenViewModel
         if (line.Kind == LineKind.Tache) fields.Add(EditField.Text("Tâche à cocher", () => label, v => label = v, required: true));
         fields.Add(EditField.ComboField("Récurrence de saisie", AllowedNames, () => rec, v => rec = v));
         fields.Add(EditField.Text("Section (regroupe les lignes, facultatif)", () => groupe, v => groupe = v));
-        if (!App.Dialogs.EditFields("Modifier la ligne", fields)) return;
+        if (line.Kind == LineKind.Compteur)
+        {
+            var meter = App.Db.Meters.First(m => m.Id == line.MeterId);
+            if (!MeterEditor.Edit("Modifier le compteur", meter, fields)) { App.Db.Entry(meter).Reload(); return; }
+        }
+        else if (!App.Dialogs.EditFields("Modifier la ligne", fields)) return;
         if (line.Kind == LineKind.Tache) line.Libelle = label.Trim();
         line.Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)];
         line.Groupe = groupe.Trim();
@@ -471,11 +467,15 @@ public partial class ReadingViewModel : EditableScreenViewModel
     internal void DeleteLine(LineRow row)
     {
         if (!App.GuardWritable() || !GuardEdit()) return;
-        if (!App.Dialogs.ShowConfirm("Retirer la ligne",
-                $"Retirer « {row.Title} » de cette vue ? Les relevés du compteur sont conservés (et restent visibles dans les autres vues)."))
+        var isMeter = row.Line.Kind == LineKind.Compteur;
+        if (!App.Dialogs.ShowConfirm("Supprimer la ligne",
+                isMeter ? $"Supprimer le compteur « {row.Title} » ? Tous ses relevés seront supprimés définitivement (astuce : « Arrêté » dans sa fiche le garde en historique)."
+                        : $"Supprimer la tâche « {row.Title} » ?"))
             return;
         var line = App.Db.ViewLines.First(l => l.Id == row.Line.Id);
-        App.Db.ViewLines.Remove(line);
+        // shortcut: un compteur encore partagé par une ancienne vue n'est pas supprimé, seule la ligne l'est
+        if (isMeter && line.MeterId is { } mid && !App.Db.ViewLines.Any(l => l.MeterId == mid && l.Id != line.Id)) App.Db.Meters.Remove(App.Db.Meters.First(m => m.Id == mid)); // cascade : ligne et relevés
+        else App.Db.ViewLines.Remove(line);
         App.Db.SaveChanges();
         Reload();
         _main.RefreshNotificationBadge();
@@ -486,7 +486,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
     {
         if (!App.GuardWritable() || !GuardEdit()) return;
         if (!App.Dialogs.ShowConfirm("Supprimer le relevé",
-                $"Supprimer le relevé de « {row.Meter} » du {row.DateText} ({row.ValueText} {row.Unit}) ? Il disparaît aussi des autres vues."))
+                $"Supprimer le relevé de « {row.Meter} » du {row.DateText} ({row.ValueText} {row.Unit}) ?"))
             return;
         var r = App.Db.MeterReadings.First(x => x.Id == row.Reading.Id);
         App.Db.MeterReadings.Remove(r);

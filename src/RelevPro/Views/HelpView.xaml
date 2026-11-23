@@ -10,10 +10,10 @@
                 <StackPanel>
                     <TextBlock Text="Compteurs et vues de relevé" FontWeight="SemiBold" Margin="0,0,0,6"/>
                     <TextBlock Style="{StaticResource SectionText}" TextWrapping="Wrap">
-                        Créez d'abord vos compteurs (menu « Compteurs »), puis des vues de relevé (menu « Relevés »).
-                        Dans une vue, ajoutez des lignes : un compteur à relever ou une tâche à cocher, avec sa récurrence
-                        (hebdomadaire, mensuelle, trimestrielle, semestrielle, annuelle). Un même compteur peut figurer dans
-                        plusieurs vues : ses relevés sont partagés, une valeur saisie dans une vue apparaît dans les autres.
+                        Créez des vues de relevé (menu « Relevés »). Chaque vue est indépendante : en mode édition, ajoutez-y
+                        des lignes, un compteur à relever ou une tâche à cocher, avec leur récurrence (hebdomadaire, mensuelle,
+                        trimestrielle, semestrielle, annuelle). Un compteur appartient à une seule vue ; les unités et les
+                        familles se gèrent avec les boutons « Unités… » et « Familles… » de la vue.
                     </TextBlock>
                 </StackPanel>
             </Border>

@@ -55,7 +55,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
             "Saisies en retard, saisies à faire sur la période en cours et valeurs forcées récemment."));
 
         NavigationItems.Add(_viewsMenu);
-        NavigationItems.Add(new NavigationItem("Compteurs", "🔢", () => new MeterListViewModel(this)));
         RebuildViewItems();
         RefreshNotificationBadge();
 

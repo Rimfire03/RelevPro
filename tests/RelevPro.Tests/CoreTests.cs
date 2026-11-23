@@ -86,9 +86,11 @@ public class CoreTests
             db.SaveChanges();
 
             var n = NotificationService.Build(db, new DateTime(2026, 11, 10));
-            Assert.Contains(n, x => x.Level == NotificationLevel.Pending && x.Title.Contains("Eau"));
-            Assert.Contains(n, x => x.Level == NotificationLevel.Late && x.Title.Contains("Purge"));
-            Assert.DoesNotContain(n, x => x.Level == NotificationLevel.Late && x.Title.Contains("Eau"));
+            Assert.Contains(n, x => x.Level == NotificationLevel.Pending && (x.Title + x.Detail).Contains("Eau"));
+            Assert.Contains(n, x => x.Level == NotificationLevel.Late && (x.Title + x.Detail).Contains("Purge"));
+            Assert.DoesNotContain(n, x => x.Level == NotificationLevel.Late && (x.Title + x.Detail).Contains("Eau"));
+            // une seule notification par vue, récurrence et période
+            Assert.Equal(n.Count(x => x.Level == NotificationLevel.Late).ToString(), n.Where(x => x.Level == NotificationLevel.Late).Select(x => (x.ViewId, x.Detail)).Distinct().Count().ToString());
             Assert.Equal(1, db.Sites.Count());
         }
         finally { try { File.Delete(path); } catch { } }
