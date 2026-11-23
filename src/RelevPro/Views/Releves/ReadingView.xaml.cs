@@ -18,10 +18,15 @@ public partial class ReadingView : UserControl
         InitializeComponent();
         DataContextChanged += (_, e) =>
         {
-            if (e.OldValue is ReadingViewModel o) o.ColumnsChanged -= RebuildColumns;
-            if (e.NewValue is ReadingViewModel n) { n.ColumnsChanged += RebuildColumns; RebuildColumns(); }
+            if (e.OldValue is ReadingViewModel o) { o.ColumnsChanged -= RebuildColumns; o.PropertyChanged -= OnVmChanged; }
+            if (e.NewValue is ReadingViewModel n) { n.ColumnsChanged += RebuildColumns; n.PropertyChanged += OnVmChanged; RebuildColumns(); ShowActions(); }
         };
     }
+
+    private void OnVmChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) { if (e.PropertyName == nameof(ReadingViewModel.IsEditMode)) ShowActions(); }
+
+    /// <summary>La colonne Actions (Modifier / Supprimer) n'apparaît qu'en mode édition.</summary>
+    private void ShowActions() => ActionsColumn.Visibility = (DataContext as ReadingViewModel)?.IsEditMode == true ? Visibility.Visible : Visibility.Collapsed;
 
     private void RebuildColumns()
     {

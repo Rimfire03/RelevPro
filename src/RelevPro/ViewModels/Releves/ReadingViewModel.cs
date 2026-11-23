@@ -74,6 +74,8 @@ public partial class LineRow : ObservableObject
 
     public string Groupe => Line.Groupe;
     public string GroupeShown { get; init; } = string.Empty;
+    /// <summary>Dernière ligne de sa section : seule sa cellule « Section » garde un trait du bas (cellules fusionnées).</summary>
+    public bool IsGroupEnd { get; set; } = true;
     public string Title => Line.Titre;
     public bool IsMeter => Line.Kind == LineKind.Compteur;
     public bool IsTask => !IsMeter;
@@ -254,6 +256,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
             }
             Lines.Add(row);
         }
+        for (var i = 0; i < Lines.Count; i++) Lines[i].IsGroupEnd = i == Lines.Count - 1 || Lines[i + 1].Groupe != Lines[i].Groupe;
         Loaded = true;
     }
 

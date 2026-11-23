@@ -27,10 +27,17 @@
                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,8,0,0" Foreground="{StaticResource BrushPrimary}" TextWrapping="Wrap"/>
                     <!-- Colonnes de saisie (une par semaine / période) ajoutées dans ReadingView.xaml.cs, entre « Récurrence » et « Consommation ». -->
                     <DataGrid x:Name="SaisieGrid" ItemsSource="{Binding Lines}" CanUserResizeColumns="True" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                              HeadersVisibility="Column" SelectionMode="Single" RowHeight="34" GridLinesVisibility="All">
+                              HeadersVisibility="Column" SelectionMode="Single" RowHeight="34" GridLinesVisibility="Vertical">
+                        <!-- Traits horizontaux dessinés par les cellules (bas de cellule) pour pouvoir les retirer dans la colonne Section : cellules fusionnées. -->
+                        <DataGrid.CellStyle>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                <Setter Property="BorderBrush" Value="{Binding HorizontalGridLinesBrush, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                            </Style>
+                        </DataGrid.CellStyle>
                         <DataGrid.Columns>
                             <!-- Actions en première colonne : à droite elles sortent de l'écran quand il y a beaucoup de semaines. -->
-                            <DataGridTemplateColumn Width="170">
+                            <DataGridTemplateColumn x:Name="ActionsColumn" Width="170" Visibility="Collapsed">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
@@ -41,6 +48,15 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Section" Binding="{Binding GroupeShown}" IsReadOnly="True" Width="190" MinWidth="80">
+                                <DataGridTextColumn.CellStyle>
+                                    <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                        <Setter Property="BorderBrush" Value="{Binding HorizontalGridLinesBrush, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                                        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsGroupEnd}" Value="True"><Setter Property="BorderThickness" Value="0,0,1,1"/></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.CellStyle>
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock"><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="VerticalAlignment" Value="Top"/><Setter Property="Margin" Value="0,8,0,0"/></Style>
                                 </DataGridTextColumn.ElementStyle>
