@@ -17,28 +17,7 @@ internal static class DatabaseMigrations
         (5, "Tour et remplacement de compteur", AddRollover),
         (6, "Compteurs : valeurs tronquées", AddTruncate),
         (7, "Lignes : mois de début de période", AddStartMonth),
-        (8, "Suppression des familles", DropFamilies),
     };
-
-    /// <summary>Supprime les familles : entrées de catalogue (Kind = 1) et colonnes Famille des compteurs et des vues.</summary>
-    private static void DropFamilies(RelevDbContext db)
-    {
-        db.Database.ExecuteSqlRaw($"DELETE FROM {ServerSql.Q(db.Provider, "CatalogItems")} WHERE {ServerSql.Q(db.Provider, "Kind")} = 1");
-        Drop(db, "Meters", "Famille");
-        Drop(db, "ReadingViews", "Famille");
-    }
-
-    private static void Drop(RelevDbContext db, string table, string col)
-    {
-        var p = db.Provider;
-        var exists = p == Services.DatabaseProvider.Sqlite ? SchemaInspector.GetColumns(db, table).Contains(col) : ServerSql.ColumnExists(db, table, col);
-        if (!exists) return;
-        if (p == Services.DatabaseProvider.SqlServer) // la colonne a une contrainte DEFAULT nommée automatiquement : à supprimer d'abord
-            db.Database.ExecuteSqlRaw(
-                "DECLARE @n nvarchar(256) = (SELECT d.name FROM sys.default_constraints d JOIN sys.columns c ON d.parent_object_id = c.object_id AND d.parent_column_id = c.column_id " +
-                $"WHERE d.parent_object_id = OBJECT_ID(N'{table}') AND c.name = N'{col}'); IF @n IS NOT NULL EXEC(N'ALTER TABLE [{table}] DROP CONSTRAINT [' + @n + N']');");
-        db.Database.ExecuteSqlRaw($"ALTER TABLE {ServerSql.Q(p, table)} DROP COLUMN {ServerSql.Q(p, col)}");
-    }
 
     private static void AddStartMonth(RelevDbContext db) =>
         Add(db, "ViewLines", "MoisDebut", "INTEGER NOT NULL DEFAULT 1", "integer NOT NULL DEFAULT 1", "int NOT NULL DEFAULT 1", "int NOT NULL DEFAULT 1");
@@ -114,7 +93,6 @@ internal static class DatabaseMigrations
         (5, "Tour et remplacement de compteur", AddRollover),
         (6, "Compteurs : valeurs tronquées", AddTruncate),
         (7, "Lignes : mois de début de période", AddStartMonth),
-        (8, "Suppression des familles", DropFamilies),
     };
 
     internal static IReadOnlyList<(int Version, string Description, Action<RelevDbContext> Apply)> ServerPlan(int fromVersion)

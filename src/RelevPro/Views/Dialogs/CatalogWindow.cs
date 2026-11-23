@@ -6,7 +6,7 @@ using RelevPro.Services;
 
 namespace RelevPro.Views.Dialogs;
 
-/// <summary>Gestion d'un catalogue (unités) : ajout, renommage, suppression.</summary>
+/// <summary>Gestion d'un catalogue (unités ou familles de compteurs) : ajout, renommage, suppression.</summary>
 public sealed class CatalogWindow : Window
 {
     private readonly CatalogKind _kind;
@@ -41,7 +41,7 @@ public sealed class CatalogWindow : Window
         actions.Children.Add(B("Fermer", "SecondaryButton", Close));
 
         var root = new StackPanel { Margin = new Thickness(20) };
-        root.Children.Add(new TextBlock { Text = "Unités proposées dans la liste déroulante des compteurs.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
+        root.Children.Add(new TextBlock { Text = kind == CatalogKind.Unite ? "Unités proposées dans la liste déroulante des compteurs." : "Familles proposées dans la liste déroulante des compteurs.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
         root.Children.Add(add);
         root.Children.Add(_list);
         root.Children.Add(actions);

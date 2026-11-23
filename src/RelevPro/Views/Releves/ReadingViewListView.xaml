@@ -4,7 +4,7 @@
     <DockPanel Margin="24">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
             <TextBlock Text="Vues de relevé" Style="{StaticResource HeaderText}"/>
-            <TextBlock Text="Chaque vue a une fréquence (hebdomadaire, mensuelle...) et regroupe des compteurs à relever et des tâches à cocher." Style="{StaticResource SectionText}" Margin="0,4,0,10"/>
+            <TextBlock Text="Chaque vue a une fréquence (hebdomadaire, mensuelle...) et regroupe des compteurs à relever et des tâches à cocher. Les vues d'une même famille sont regroupées dans le menu." Style="{StaticResource SectionText}" Margin="0,4,0,10"/>
             <DockPanel>
                 <Button Content="{Binding EditModeButtonLabel}" Command="{Binding ToggleEditModeCommand}" Style="{StaticResource EditModeButtonStyle}" DockPanel.Dock="Right"/>
                 <Button Content="+ Nouvelle vue" Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}" HorizontalAlignment="Left" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
@@ -13,6 +13,7 @@
         <DataGrid ItemsSource="{Binding Rows}" CanUserResizeColumns="True" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="36">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Vue" Binding="{Binding Nom}" Width="300" MinWidth="120"/>
+                <DataGridTextColumn Header="Famille" Binding="{Binding Famille}" Width="160"/>
                 <DataGridTextColumn Header="Fréquence" Binding="{Binding RecurrenceName}" Width="120"/>
                 <DataGridTextColumn Header="Contenu" Binding="{Binding Summary}" Width="*" MinWidth="200"/>
                 <DataGridTemplateColumn Width="280">

@@ -90,7 +90,9 @@ public class RelevDbContext : DbContext
     {
         modelBuilder.Entity<SharedAsset>().HasKey(a => a.Key);
 
+        modelBuilder.Entity<ReadingView>().Property(v => v.Famille).HasMaxLength(200);
         modelBuilder.Entity<ViewLine>().Property(l => l.Groupe).HasMaxLength(200);
+        modelBuilder.Entity<Meter>().Property(m => m.Famille).HasMaxLength(200);
         modelBuilder.Entity<CatalogItem>().Property(c => c.Nom).HasMaxLength(100);
         modelBuilder.Entity<Meter>().Property(m => m.SeuilHaut).HasPrecision(18, 4);
         modelBuilder.Entity<Meter>().Property(m => m.Capacite).HasPrecision(18, 4);

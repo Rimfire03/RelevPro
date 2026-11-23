@@ -11,6 +11,7 @@ namespace RelevPro.ViewModels.Releves;
 public sealed record ViewRow(ReadingView View, int MeterLines, int TaskLines)
 {
     public string Nom => View.Nom;
+    public string Famille => View.Famille;
     public string RecurrenceName => Periods.Name(View.Recurrence);
     public string Summary => $"{MeterLines} compteur(s), {TaskLines} tâche(s)";
 }
@@ -31,23 +32,24 @@ public partial class ReadingViewListViewModel : EditableScreenViewModel
     {
         Rows.Clear();
         var lines = App.Db.ViewLines.AsNoTracking().ToList().ToLookup(l => l.ReadingViewId);
-        foreach (var v in App.Db.ReadingViews.AsNoTracking().OrderBy(v => v.Ordre).ThenBy(v => v.Nom).ToList())
+        foreach (var v in App.Db.ReadingViews.AsNoTracking().OrderBy(v => v.Famille).ThenBy(v => v.Ordre).ThenBy(v => v.Nom).ToList())
             Rows.Add(new ViewRow(v, lines[v.Id].Count(l => l.Kind == LineKind.Compteur), lines[v.Id].Count(l => l.Kind == LineKind.Tache)));
     }
 
     private static readonly List<string> RecurrenceNames = Enum.GetValues<Recurrence>().Select(Periods.Name).ToList();
 
-    /// <summary>Saisie nom et fréquence de la vue.</summary>
+    /// <summary>Saisie nom, famille et fréquence de la vue.</summary>
     private static bool Edit(string title, ReadingView v)
     {
-        var nom = v.Nom; var rec = (int)v.Recurrence;
+        var nom = v.Nom; var fam = v.Famille; var rec = (int)v.Recurrence;
         var ok = App.Dialogs.EditFields(title, new List<EditField>
         {
             EditField.Text("Nom de la vue", () => nom, x => nom = x, required: true),
+            EditField.Text("Famille (regroupement dans le menu, vide = aucune)", () => fam, x => fam = x),
             EditField.ComboField("Fréquence de la vue (une colonne par période)", RecurrenceNames, () => rec, x => rec = x)
         });
         if (!ok || string.IsNullOrWhiteSpace(nom)) return false;
-        v.Nom = nom.Trim(); v.Recurrence = (Recurrence)rec;
+        v.Nom = nom.Trim(); v.Famille = fam.Trim(); v.Recurrence = (Recurrence)rec;
         return true;
     }
 
