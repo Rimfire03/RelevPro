@@ -93,16 +93,6 @@ public partial class LineRow : ObservableObject
     [RelayCommand] private void Delete() => Owner.DeleteLine(this);
 }
 
-public sealed record ReadingRow(MeterReading Reading, string Meter, string Unit)
-{
-    public string DateText => Reading.Date.ToString("dd/MM/yyyy");
-    public string ValueText => Reading.Value.ToString("0.####", CultureInfo.GetCultureInfo("fr-FR"));
-    public string ForcedText => Reading.Tour ? "Tour" : Reading.Remplacement ? "Compteur changé" : Reading.Forced ? "Forcé" : "";
-    public string Anomaly => Reading.Anomaly;
-    public string By => Reading.EnteredBy;
-    public bool IsAlert => Reading.Forced && Reading.Date >= DateTime.Today.AddDays(-NotificationService.AnomalyDays);
-}
-
 public partial class ReadingViewModel : EditableScreenViewModel
 {
     private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
@@ -116,7 +106,6 @@ public partial class ReadingViewModel : EditableScreenViewModel
     public string ViewName { get; private set; } = string.Empty;
     public string ViewSubtitle { get; private set; } = string.Empty;
     public ObservableCollection<LineRow> Lines { get; } = new();
-    public ObservableCollection<ReadingRow> Readings { get; } = new();
     public List<int> Years { get; private set; } = new();
 
     /// <summary>Colonnes de la grille (une par période de la vue) ; la vue XAML recrée ses colonnes sur <see cref="ColumnsChanged"/>.</summary>
@@ -165,7 +154,6 @@ public partial class ReadingViewModel : EditableScreenViewModel
         ReloadLines();
         ReloadMonthly();
         ReloadYearly();
-        ReloadReadings();
     }
 
     private Recurrence LineRec(ViewLine l) => l.Recurrence < _rec ? _rec : l.Recurrence;
@@ -299,22 +287,13 @@ public partial class ReadingViewModel : EditableScreenViewModel
         return t.DefaultView;
     }
 
-    private void ReloadReadings()
-    {
-        Readings.Clear();
-        var ids = App.Db.ViewLines.AsNoTracking().Where(l => l.ReadingViewId == _viewId && l.MeterId != null).Select(l => l.MeterId!.Value).Distinct().ToList();
-        foreach (var r in App.Db.MeterReadings.AsNoTracking().Include(r => r.Meter).Where(r => ids.Contains(r.MeterId))
-                     .OrderByDescending(r => r.Date).ThenByDescending(r => r.Id).Take(300).ToList())
-            Readings.Add(new ReadingRow(r, r.Meter?.Nom ?? "", r.Meter?.Unite ?? ""));
-    }
-
     // ---- Saisie ----
 
     internal void SaveCell(GridCell cell)
     {
         if (!App.GuardWritable()) { ReloadLines(); return; }
         var text = (cell.Text ?? "").Trim().Replace(" ", "");
-        if (text.Length == 0) { ReloadLines(); return; } // effacer une case ne supprime pas le relevé (voir l'onglet Relevés)
+        if (text.Length == 0) { ReloadLines(); return; } // effacer une case ne supprime pas le relevé
         if (!decimal.TryParse(text.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out var value))
         {
             App.Dialogs.ShowMessage("Valeur invalide", "Saisissez un nombre (ex. 1234,5).");
@@ -509,20 +488,6 @@ public partial class ReadingViewModel : EditableScreenViewModel
         // shortcut: un compteur encore partagé par une ancienne vue n'est pas supprimé, seule la ligne l'est
         if (isMeter && line.MeterId is { } mid && !App.Db.ViewLines.Any(l => l.MeterId == mid && l.Id != line.Id)) App.Db.Meters.Remove(App.Db.Meters.First(m => m.Id == mid)); // cascade : ligne et relevés
         else App.Db.ViewLines.Remove(line);
-        App.Db.SaveChanges();
-        Reload();
-        _main.RefreshNotificationBadge();
-    }
-
-    [RelayCommand]
-    private void DeleteReading(ReadingRow row)
-    {
-        if (!App.GuardWritable() || !GuardEdit()) return;
-        if (!App.Dialogs.ShowConfirm("Supprimer le relevé",
-                $"Supprimer le relevé de « {row.Meter} » du {row.DateText} ({row.ValueText} {row.Unit}) ?"))
-            return;
-        var r = App.Db.MeterReadings.First(x => x.Id == row.Reading.Id);
-        App.Db.MeterReadings.Remove(r);
         App.Db.SaveChanges();
         Reload();
         _main.RefreshNotificationBadge();

@@ -86,40 +86,6 @@
                     <DataGrid ItemsSource="{Binding YearlyTable}" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column"/>
                 </DockPanel>
             </TabItem>
-
-            <TabItem Header="Relevés">
-                <DockPanel Margin="0,12,0,0">
-                    <DataGrid ItemsSource="{Binding Readings}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column">
-                        <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAlert}" Value="True">
-                                        <Setter Property="Background" Value="#FECACA"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.RowStyle>
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date" Binding="{Binding DateText}" Width="100"/>
-                            <DataGridTextColumn Header="Compteur" Binding="{Binding Meter}" Width="300" MinWidth="120"/>
-                            <DataGridTextColumn Header="Valeur" Binding="{Binding ValueText}" Width="110"/>
-                            <DataGridTextColumn Header="Unité" Binding="{Binding Unit}" Width="70"/>
-                            <DataGridTextColumn Header="Forcé" Binding="{Binding ForcedText}" Width="70"/>
-                            <DataGridTextColumn Header="Anomalie" Binding="{Binding Anomaly}" Width="*" MinWidth="200"/>
-                            <DataGridTextColumn Header="Saisi par" Binding="{Binding By}" Width="110"/>
-                            <DataGridTemplateColumn Width="100">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Button Content="Supprimer" Style="{StaticResource DangerButton}" Padding="8,3" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}"
-                                                Command="{Binding DataContext.DeleteReadingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}"/>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </DockPanel>
-            </TabItem>
         </TabControl>
     </DockPanel>
 </UserControl>
