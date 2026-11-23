@@ -18,6 +18,8 @@
                         <Button Content="Aujourd'hui" Style="{StaticResource SecondaryButton}" Command="{Binding TodayCommand}" Margin="0,0,24,0"/>
                         <Button Content="+ Compteur" Style="{StaticResource PrimaryButton}" Command="{Binding AddMeterLineCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="+ Tâche" Style="{StaticResource PrimaryButton}" Command="{Binding AddTaskLineCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
+                        <Button Content="Modifier la ligne" Style="{StaticResource SecondaryButton}" Command="{Binding EditSelectedCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
+                        <Button Content="Supprimer la ligne" Style="{StaticResource DangerButton}" Command="{Binding DeleteSelectedCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="Unités…" Style="{StaticResource SecondaryButton}" Command="{Binding ManageUnitsCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="Familles…" Style="{StaticResource SecondaryButton}" Command="{Binding ManageFamiliesCommand}" Margin="0,0,24,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="{Binding EditModeButtonLabel}" Command="{Binding ToggleEditModeCommand}" Style="{StaticResource EditModeButtonStyle}" Padding="12,5" Margin="0,0,16,0"/>
@@ -27,7 +29,7 @@
                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,8,0,0" Foreground="{StaticResource BrushPrimary}" TextWrapping="Wrap"/>
                     <!-- Colonnes de saisie (une par semaine / période) ajoutées dans ReadingView.xaml.cs, entre « Récurrence » et « Consommation ». -->
                     <DataGrid x:Name="SaisieGrid" ItemsSource="{Binding Lines}" CanUserResizeColumns="True" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                              HeadersVisibility="Column" SelectionMode="Single" RowHeight="34" GridLinesVisibility="Vertical">
+                              SelectedItem="{Binding SelectedLine, Mode=TwoWay}" HeadersVisibility="Column" SelectionMode="Single" RowHeight="34" GridLinesVisibility="Vertical">
                         <!-- Traits horizontaux dessinés par les cellules (bas de cellule) pour pouvoir les retirer dans la colonne Section : cellules fusionnées. -->
                         <DataGrid.CellStyle>
                             <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
@@ -40,17 +42,6 @@
                             </Style>
                         </DataGrid.CellStyle>
                         <DataGrid.Columns>
-                            <!-- Actions en première colonne : à droite elles sortent de l'écran quand il y a beaucoup de semaines. -->
-                            <DataGridTemplateColumn x:Name="ActionsColumn" Width="170" Visibility="Collapsed">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
-                                            <Button Content="Modifier" Style="{StaticResource SecondaryButton}" Padding="8,3" Margin="4,0,6,0" Command="{Binding EditCommand}"/>
-                                            <Button Content="Supprimer" Style="{StaticResource DangerButton}" Padding="8,3" Command="{Binding DeleteCommand}"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Section" Binding="{Binding GroupeShown}" IsReadOnly="True" Width="190" MinWidth="80">
                                 <DataGridTextColumn.CellStyle>
                                     <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">

@@ -427,6 +427,12 @@ public partial class ReadingViewModel : EditableScreenViewModel
         AddLine(new ViewLine { Kind = LineKind.Compteur, Meter = meter, Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)], Groupe = groupe.Trim() });
     }
 
+    /// <summary>Ligne sélectionnée dans la grille de saisie : cible des boutons « Modifier » / « Supprimer » du bandeau.</summary>
+    [ObservableProperty] private LineRow? _selectedLine;
+
+    [RelayCommand] private void EditSelected() { if (GuardEdit() && SelectedLine is { } l) EditLine(l); else if (SelectedLine is null && App.IsEditMode) App.Dialogs.ShowMessage("Modifier", "Sélectionnez d'abord une ligne dans le tableau."); }
+    [RelayCommand] private void DeleteSelected() { if (GuardEdit() && SelectedLine is { } l) DeleteLine(l); else if (SelectedLine is null && App.IsEditMode) App.Dialogs.ShowMessage("Supprimer", "Sélectionnez d'abord une ligne dans le tableau."); }
+
     [RelayCommand] private void ManageUnits() { if (!GuardEdit()) return; new Views.Dialogs.CatalogWindow(CatalogKind.Unite, "Catalogue des unités") { Owner = Application.Current.MainWindow }.ShowDialog(); }
     [RelayCommand] private void ManageFamilies() { if (!GuardEdit()) return; new Views.Dialogs.CatalogWindow(CatalogKind.Famille, "Familles de compteurs") { Owner = Application.Current.MainWindow }.ShowDialog(); }
 

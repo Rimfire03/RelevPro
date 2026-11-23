@@ -12,26 +12,16 @@ public partial class ReadingView : UserControl
 {
     /// <summary>Colonnes de saisie ajoutées dynamiquement (une par semaine / période), à retirer au prochain changement.</summary>
     private readonly List<DataGridColumn> _dynamic = new();
-    private const int FirstDynamicIndex = 4; // après Actions, Section, Ligne, Récurrence
+    private const int FirstDynamicIndex = 3; // après Section, Ligne, Récurrence
 
     public ReadingView()
     {
         InitializeComponent();
         DataContextChanged += (_, e) =>
         {
-            if (e.OldValue is ReadingViewModel o) { o.ColumnsChanged -= RebuildColumns; o.PropertyChanged -= OnVmChanged; }
-            if (e.NewValue is ReadingViewModel n) { n.ColumnsChanged += RebuildColumns; n.PropertyChanged += OnVmChanged; RebuildColumns(); ShowActions(); }
+            if (e.OldValue is ReadingViewModel o) { o.ColumnsChanged -= RebuildColumns; }
+            if (e.NewValue is ReadingViewModel n) { n.ColumnsChanged += RebuildColumns; RebuildColumns(); }
         };
-    }
-
-    private void OnVmChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) { if (e.PropertyName == nameof(ReadingViewModel.IsEditMode)) ShowActions(); }
-
-    /// <summary>La colonne Actions (Modifier / Supprimer) n'apparaît qu'en mode édition.</summary>
-    private void ShowActions()
-    {
-        var edit = (DataContext as ReadingViewModel)?.IsEditMode == true;
-        ActionsColumn.Visibility = edit ? Visibility.Visible : Visibility.Collapsed;
-        SaisieGrid.FrozenColumnCount = edit ? 1 : 0; // épinglée : le défilement horizontal (nombreuses semaines) ne la cache plus
     }
 
     private void RebuildColumns()
