@@ -33,6 +33,10 @@
                             <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
                                 <Setter Property="BorderBrush" Value="{Binding HorizontalGridLinesBrush, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
                                 <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                <Style.Triggers>
+                                    <!-- trait plus épais à chaque changement de section (dernière ligne du bloc) -->
+                                    <DataTrigger Binding="{Binding IsGroupEnd}" Value="True"><Setter Property="BorderThickness" Value="0,0,1,3"/><Setter Property="BorderBrush" Value="#94A3B8"/></DataTrigger>
+                                </Style.Triggers>
                             </Style>
                         </DataGrid.CellStyle>
                         <DataGrid.Columns>
@@ -53,7 +57,7 @@
                                         <Setter Property="BorderBrush" Value="{Binding HorizontalGridLinesBrush, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
                                         <Setter Property="BorderThickness" Value="0,0,1,0"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsGroupEnd}" Value="True"><Setter Property="BorderThickness" Value="0,0,1,1"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding IsGroupEnd}" Value="True"><Setter Property="BorderThickness" Value="0,0,1,3"/><Setter Property="BorderBrush" Value="#94A3B8"/></DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </DataGridTextColumn.CellStyle>
