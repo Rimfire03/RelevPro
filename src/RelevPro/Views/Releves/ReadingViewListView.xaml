@@ -10,12 +10,12 @@
                 <Button Content="+ Nouvelle vue" Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}" HorizontalAlignment="Left" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
             </DockPanel>
         </StackPanel>
-        <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="36">
+        <DataGrid ItemsSource="{Binding Rows}" CanUserResizeColumns="True" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="36">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Vue" Binding="{Binding Nom}" Width="*"/>
+                <DataGridTextColumn Header="Vue" Binding="{Binding Nom}" Width="300" MinWidth="120"/>
                 <DataGridTextColumn Header="Famille" Binding="{Binding Famille}" Width="160"/>
                 <DataGridTextColumn Header="Fréquence" Binding="{Binding RecurrenceName}" Width="120"/>
-                <DataGridTextColumn Header="Contenu" Binding="{Binding Summary}" Width="260"/>
+                <DataGridTextColumn Header="Contenu" Binding="{Binding Summary}" Width="*" MinWidth="200"/>
                 <DataGridTemplateColumn Width="280">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>

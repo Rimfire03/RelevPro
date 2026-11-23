@@ -14,15 +14,15 @@
                 </StackPanel>
             </DockPanel>
         </StackPanel>
-        <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="36">
+        <DataGrid ItemsSource="{Binding Rows}" CanUserResizeColumns="True" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="36">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Compteur" Binding="{Binding Nom}" Width="*"/>
+                <DataGridTextColumn Header="Compteur" Binding="{Binding Nom}" Width="300" MinWidth="120"/>
                 <DataGridTextColumn Header="Famille" Binding="{Binding Famille}" Width="150"/>
                 <DataGridTextColumn Header="État" Binding="{Binding Etat}" Width="90"/>
                 <DataGridTextColumn Header="Unité" Binding="{Binding Unite}" Width="90"/>
                 <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="130"/>
                 <DataGridTextColumn Header="Seuil d'alarme" Binding="{Binding Seuil}" Width="120"/>
-                <DataGridTextColumn Header="Utilisation" Binding="{Binding Usage}" Width="220"/>
+                <DataGridTextColumn Header="Utilisation" Binding="{Binding Usage}" Width="*" MinWidth="200"/>
                 <DataGridTemplateColumn Width="190">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>

@@ -24,11 +24,11 @@
                     </WrapPanel>
                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,8,0,0" Foreground="{StaticResource BrushPrimary}" TextWrapping="Wrap"/>
                     <!-- Colonnes de saisie (une par semaine / période) ajoutées dans ReadingView.xaml.cs, entre « Récurrence » et « Consommation ». -->
-                    <DataGrid x:Name="SaisieGrid" ItemsSource="{Binding Lines}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                    <DataGrid x:Name="SaisieGrid" ItemsSource="{Binding Lines}" CanUserResizeColumns="True" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                               HeadersVisibility="Column" SelectionMode="Single" RowHeight="34" GridLinesVisibility="All">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Section" Binding="{Binding Groupe}" IsReadOnly="True" Width="140"/>
-                            <DataGridTextColumn Header="Ligne" Binding="{Binding Title}" IsReadOnly="True" Width="*" MinWidth="170"/>
+                            <DataGridTextColumn Header="Section" Binding="{Binding Groupe}" IsReadOnly="True" Width="190" MinWidth="80"/>
+                            <DataGridTextColumn Header="Ligne" Binding="{Binding Title}" IsReadOnly="True" Width="300" MinWidth="120"/>
                             <DataGridTextColumn Header="Récurrence" Binding="{Binding RecurrenceName}" IsReadOnly="True" Width="105"/>
                             <DataGridTextColumn x:Name="ConsumptionColumn" Header="Consommation" Binding="{Binding ConsumptionText}" IsReadOnly="True" Width="130"/>
                             <DataGridTemplateColumn Header="Statut" Width="90">
@@ -83,11 +83,11 @@
                         </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Date" Binding="{Binding DateText}" Width="100"/>
-                            <DataGridTextColumn Header="Compteur" Binding="{Binding Meter}" Width="*"/>
+                            <DataGridTextColumn Header="Compteur" Binding="{Binding Meter}" Width="300" MinWidth="120"/>
                             <DataGridTextColumn Header="Valeur" Binding="{Binding ValueText}" Width="110"/>
                             <DataGridTextColumn Header="Unité" Binding="{Binding Unit}" Width="70"/>
                             <DataGridTextColumn Header="Forcé" Binding="{Binding ForcedText}" Width="70"/>
-                            <DataGridTextColumn Header="Anomalie" Binding="{Binding Anomaly}" Width="2*"/>
+                            <DataGridTextColumn Header="Anomalie" Binding="{Binding Anomaly}" Width="*" MinWidth="200"/>
                             <DataGridTextColumn Header="Saisi par" Binding="{Binding By}" Width="110"/>
                             <DataGridTemplateColumn Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
