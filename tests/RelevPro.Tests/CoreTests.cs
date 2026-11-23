@@ -140,18 +140,17 @@ public class CoreTests
             var f = new DbContextFactory(path);
             f.EnsureDatabaseUpToDate("test");
             using var db = f.Create();
-            db.Meters.Add(new Meter { Nom = "Gaz", Unite = "Nm3", Famille = "Gaz" });
+            db.Meters.Add(new Meter { Nom = "Gaz", Unite = "Nm3" });
             db.SaveChanges();
             CatalogService.EnsureDefaults(db);
             Assert.Contains("kWh", CatalogService.Names(db, CatalogKind.Unite));
             Assert.Contains("Nm3", CatalogService.Names(db, CatalogKind.Unite)); // unité déjà saisie sur un compteur
-            Assert.Contains("Chauffage", CatalogService.Names(db, CatalogKind.Famille));
             Assert.False(CatalogService.Add(db, CatalogKind.Unite, "KWH")); // doublon, casse ignorée
 
             Assert.True(CatalogService.Rename(db, CatalogKind.Unite, "Nm3", "m³ normaux"));
             Assert.Equal("m³ normaux", db.Meters.Single().Unite);
-            CatalogService.Delete(db, CatalogKind.Famille, "Gaz");
-            Assert.Equal("", db.Meters.Single().Famille);
+            CatalogService.Delete(db, CatalogKind.Unite, "m³ normaux");
+            Assert.Equal("", db.Meters.Single().Unite);
         }
         finally { try { File.Delete(path); } catch { } }
     }
@@ -167,15 +166,22 @@ public class CoreTests
             using (var db = f.Create())
             {
                 db.Database.ExecuteSqlRaw("DROP TABLE CatalogItems");
-                db.Database.ExecuteSqlRaw("ALTER TABLE Meters DROP COLUMN Famille");
+                db.Database.ExecuteSqlRaw("ALTER TABLE Meters ADD COLUMN Famille TEXT NOT NULL DEFAULT 'Eau'");
+                db.Database.ExecuteSqlRaw("ALTER TABLE ReadingViews ADD COLUMN Famille TEXT NOT NULL DEFAULT ''");
+                db.Database.ExecuteSqlRaw("CREATE TABLE CatalogItems (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, SiteId INTEGER NOT NULL, Kind INTEGER NOT NULL, Nom TEXT NOT NULL, Ordre INTEGER NOT NULL)");
+                db.Database.ExecuteSqlRaw("INSERT INTO CatalogItems (SiteId, Kind, Nom, Ordre) VALUES (1, 1, 'Eau', 0)");
                 db.Database.ExecuteSqlRaw("PRAGMA user_version = 2");
             }
             Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
             new DbContextFactory(path).EnsureDatabaseUpToDate("test");
             using var db2 = new DbContextFactory(path).Create();
-            db2.Meters.Add(new Meter { Nom = "X", Famille = "Eau" }); db2.SaveChanges();
+            db2.Meters.Add(new Meter { Nom = "X", Unite = "Eau" }); db2.SaveChanges();
             CatalogService.EnsureDefaults(db2);
-            Assert.Contains("Eau", CatalogService.Names(db2, CatalogKind.Famille));
+            Assert.Contains("Eau", CatalogService.Names(db2, CatalogKind.Unite));
+            // v8 : colonnes Famille supprimées et entrées de catalogue « famille » effacées
+            Assert.Empty(db2.Database.SqlQueryRaw<int>("SELECT 1 AS Value FROM pragma_table_info('Meters') WHERE name = 'Famille'").ToList());
+            Assert.Empty(db2.Database.SqlQueryRaw<int>("SELECT 1 AS Value FROM pragma_table_info('ReadingViews') WHERE name = 'Famille'").ToList());
+            Assert.Empty(db2.Database.SqlQueryRaw<int>("SELECT 1 AS Value FROM CatalogItems WHERE Kind = 1").ToList());
         }
         finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); try { File.Delete(path); } catch { } }
     }

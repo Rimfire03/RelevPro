@@ -28,7 +28,6 @@ public sealed class FirstRunResult
 
     public string SiteName { get; set; } = Site.DefaultName;
     public string ViewName { get; set; } = "";
-    public string ViewFamily { get; set; } = "";
     public Recurrence ViewRecurrence { get; set; } = Recurrence.Hebdo;
 }
 
@@ -53,7 +52,6 @@ public sealed class FirstRunWizard : WizardWindow
     private readonly TextBlock _testResult = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0), MaxWidth = 560, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly TextBox _site = new();
     private readonly TextBox _view = new();
-    private readonly TextBox _family = new();
     private readonly ComboBox _rec = new() { Width = 220, HorizontalAlignment = HorizontalAlignment.Left };
 
     public FirstRunWizard(string defaultDatabasePath)
@@ -120,14 +118,12 @@ public sealed class FirstRunWizard : WizardWindow
             {
                 var p = new StackPanel();
                 p.Children.Add(Field("Nom de la vue", Reuse(_view), "Ex. Relevés hebdo chaufferie"));
-                p.Children.Add(Field("Famille (regroupement dans le menu)", Reuse(_family), "Facultatif."));
                 p.Children.Add(Field("Fréquence", Reuse(_rec), "Les lignes de la vue peuvent être plus lentes (mensuelles, trimestrielles...), jamais plus rapides."));
                 return p;
             },
             Validate = () =>
             {
                 Result.ViewName = _view.Text.Trim();
-                Result.ViewFamily = _family.Text.Trim();
                 Result.ViewRecurrence = (Recurrence)Math.Max(0, _rec.SelectedIndex);
                 DialogResult = true;
                 return null;

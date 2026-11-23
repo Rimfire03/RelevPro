@@ -142,7 +142,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
         var v = App.Db.ReadingViews.AsNoTracking().FirstOrDefault(x => x.Id == viewId);
         ViewName = v?.Nom ?? "(vue supprimée)";
         _rec = v?.Recurrence ?? Recurrence.Hebdo;
-        ViewSubtitle = (v is { Famille.Length: > 0 } ? v.Famille + " · " : "") + "Vue " + Periods.Name(_rec).ToLowerInvariant();
+        ViewSubtitle = "Vue " + Periods.Name(_rec).ToLowerInvariant();
         Reload();
     }
 
@@ -438,7 +438,6 @@ public partial class ReadingViewModel : EditableScreenViewModel
     [RelayCommand] private void DeleteSelected() { if (GuardEdit() && SelectedLine is { } l) DeleteLine(l); else if (SelectedLine is null && App.IsEditMode) App.Dialogs.ShowMessage("Supprimer", "Sélectionnez d'abord une ligne dans le tableau."); }
 
     [RelayCommand] private void ManageUnits() { if (!GuardEdit()) return; new Views.Dialogs.CatalogWindow(CatalogKind.Unite, "Catalogue des unités") { Owner = Application.Current.MainWindow }.ShowDialog(); }
-    [RelayCommand] private void ManageFamilies() { if (!GuardEdit()) return; new Views.Dialogs.CatalogWindow(CatalogKind.Famille, "Familles de compteurs") { Owner = Application.Current.MainWindow }.ShowDialog(); }
 
     [RelayCommand]
     private void AddTaskLine()

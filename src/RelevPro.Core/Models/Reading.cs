@@ -6,9 +6,9 @@ public enum Recurrence { Hebdo = 0, Mensuel = 1, Trimestriel = 2, Semestriel = 3
 public enum LineKind { Compteur = 0, Tache = 1 }
 
 /// <summary>Type d'entrée d'un catalogue (listes déroulantes).</summary>
-public enum CatalogKind { Unite = 0, Famille = 1 }
+public enum CatalogKind { Unite = 0 }
 
-/// <summary>Entrée d'un catalogue modifiable : unité de mesure ou famille de compteurs (électricité, plomberie...).</summary>
+/// <summary>Entrée d'un catalogue modifiable : unité de mesure.</summary>
 public class CatalogItem : ISiteScoped
 {
     public int Id { get; set; }
@@ -27,8 +27,6 @@ public class Meter : ISiteScoped
     public string Nom { get; set; } = string.Empty;
     public string Unite { get; set; } = string.Empty;
 
-    /// <summary>Famille du compteur (catalogue « Famille » : électricité, plomberie, chauffage...), vide = aucune.</summary>
-    public string Famille { get; set; } = string.Empty;
     public int Ordre { get; set; }
 
     /// <summary>Écart toléré, en % au-dessus de la consommation journalière moyenne habituelle, avant alerte.</summary>
@@ -60,9 +58,6 @@ public class ReadingView : ISiteScoped
     public int Id { get; set; }
     public int SiteId { get; set; }
     public string Nom { get; set; } = string.Empty;
-
-    /// <summary>Famille de regroupement dans le menu (vide = vue non regroupée).</summary>
-    public string Famille { get; set; } = string.Empty;
 
     /// <summary>Fréquence de la vue : une colonne de saisie par période (semaine, mois...). Les lignes ont la même
     /// récurrence ou une plus lente (voir <see cref="Services.Periods.IsActive"/>).</summary>

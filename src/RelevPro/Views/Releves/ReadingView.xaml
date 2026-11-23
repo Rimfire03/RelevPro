@@ -20,8 +20,7 @@
                         <Button Content="+ Tâche" Style="{StaticResource PrimaryButton}" Command="{Binding AddTaskLineCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="Modifier la ligne" Style="{StaticResource SecondaryButton}" Command="{Binding EditSelectedCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="Supprimer la ligne" Style="{StaticResource DangerButton}" Command="{Binding DeleteSelectedCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
-                        <Button Content="Unités…" Style="{StaticResource SecondaryButton}" Command="{Binding ManageUnitsCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
-                        <Button Content="Familles…" Style="{StaticResource SecondaryButton}" Command="{Binding ManageFamiliesCommand}" Margin="0,0,24,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
+                        <Button Content="Unités…" Style="{StaticResource SecondaryButton}" Command="{Binding ManageUnitsCommand}" Margin="0,0,24,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="{Binding EditModeButtonLabel}" Command="{Binding ToggleEditModeCommand}" Style="{StaticResource EditModeButtonStyle}" Padding="12,5" Margin="0,0,16,0"/>
                         <CheckBox Content="Afficher les compteurs arrêtés" IsChecked="{Binding ShowStopped}" VerticalAlignment="Center"
                                   Visibility="{Binding HasStopped, Converter={StaticResource BoolToVis}}"/>

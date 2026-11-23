@@ -25,7 +25,7 @@ public partial class App
         var r = PendingFirstRun;
         PendingFirstRun = null;
         if (r is null || r.ViewName.Length == 0) return;
-        Db.ReadingViews.Add(new ReadingView { Nom = r.ViewName, Famille = r.ViewFamily, Recurrence = r.ViewRecurrence });
+        Db.ReadingViews.Add(new ReadingView { Nom = r.ViewName, Recurrence = r.ViewRecurrence });
         Db.SaveChanges();
     }
 }
