@@ -73,6 +73,7 @@ public partial class LineRow : ObservableObject
     public LineRow(ReadingViewModel owner, ViewLine line) { Owner = owner; Line = line; }
 
     public string Groupe => Line.Groupe;
+    public string GroupeShown { get; init; } = string.Empty;
     public string Title => Line.Titre;
     public bool IsMeter => Line.Kind == LineKind.Compteur;
     public bool IsTask => !IsMeter;
@@ -190,9 +191,12 @@ public partial class ReadingViewModel : EditableScreenViewModel
         var lineIds = lines.Select(l => l.Id).ToList();
         var completions = App.Db.TaskCompletions.AsNoTracking().Where(t => lineIds.Contains(t.ViewLineId)).ToList();
 
+        string? prevGroupe = null;
         foreach (var l in lines)
         {
             var r = LineRec(l);
+            var groupeShown = l.Groupe == prevGroupe ? string.Empty : l.Groupe; // section affichée une fois par bloc de lignes
+            prevGroupe = l.Groupe;
             var stopped = l.Meter?.Arrete ?? false;
             var all = l.Kind == LineKind.Compteur ? readings[l.MeterId ?? 0].ToList() : new List<MeterReading>();
             var cells = new List<(Periods.Column Col, DateTime Lp, DateTime LpEnd, bool Active, bool Editable, MeterReading? Existing, bool Done)>();
@@ -234,7 +238,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
             if (l.Kind == LineKind.Compteur && l.Meter is { Cumulatif: true } m && ConsumptionService.Consumption(all, wStart, wEnd, ConsumptionService.Capacity(m, all)) is { } v)
                 cons = $"{v.ToString("#,0.##", Fr)} {m.Unite}".Trim();
 
-            var row = new LineRow(this, l) { ConsumptionText = cons, StatusText = status, StatusBrush = brush };
+            var row = new LineRow(this, l) { GroupeShown = groupeShown, ConsumptionText = cons, StatusText = status, StatusBrush = brush };
             foreach (var x in cells)
             {
                 // même règle que le centre de notifications : période précédente non saisie (en retard) ou valeur forcée récente

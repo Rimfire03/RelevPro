@@ -11,7 +11,7 @@ public partial class ReadingView : UserControl
 {
     /// <summary>Colonnes de saisie ajoutées dynamiquement (une par semaine / période), à retirer au prochain changement.</summary>
     private readonly List<DataGridColumn> _dynamic = new();
-    private const int FirstDynamicIndex = 3; // après Section, Ligne, Récurrence
+    private const int FirstDynamicIndex = 4; // après Actions, Section, Ligne, Récurrence
 
     public ReadingView()
     {

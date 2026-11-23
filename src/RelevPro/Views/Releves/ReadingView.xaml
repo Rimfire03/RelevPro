@@ -29,7 +29,22 @@
                     <DataGrid x:Name="SaisieGrid" ItemsSource="{Binding Lines}" CanUserResizeColumns="True" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                               HeadersVisibility="Column" SelectionMode="Single" RowHeight="34" GridLinesVisibility="All">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Section" Binding="{Binding Groupe}" IsReadOnly="True" Width="190" MinWidth="80"/>
+                            <!-- Actions en première colonne : à droite elles sortent de l'écran quand il y a beaucoup de semaines. -->
+                            <DataGridTemplateColumn Width="170">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
+                                            <Button Content="Modifier" Style="{StaticResource SecondaryButton}" Padding="8,3" Margin="4,0,6,0" Command="{Binding EditCommand}"/>
+                                            <Button Content="Supprimer" Style="{StaticResource DangerButton}" Padding="8,3" Command="{Binding DeleteCommand}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Section" Binding="{Binding GroupeShown}" IsReadOnly="True" Width="190" MinWidth="80">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock"><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="VerticalAlignment" Value="Top"/><Setter Property="Margin" Value="0,8,0,0"/></Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
                             <DataGridTextColumn Header="Ligne" Binding="{Binding Title}" IsReadOnly="True" Width="300" MinWidth="120"/>
                             <DataGridTextColumn Header="Récurrence" Binding="{Binding RecurrenceName}" IsReadOnly="True" Width="105"/>
                             <DataGridTextColumn x:Name="ConsumptionColumn" Header="Consommation" Binding="{Binding ConsumptionText}" IsReadOnly="True" Width="130"/>
@@ -37,16 +52,6 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="6,0"/>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTemplateColumn Width="170">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
-                                            <Button Content="Modifier" Style="{StaticResource SecondaryButton}" Padding="8,3" Margin="0,0,6,0" Command="{Binding EditCommand}"/>
-                                            <Button Content="Retirer" Style="{StaticResource DangerButton}" Padding="8,3" Command="{Binding DeleteCommand}"/>
-                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
