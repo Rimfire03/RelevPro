@@ -27,7 +27,12 @@ public partial class ReadingView : UserControl
     private void OnVmChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) { if (e.PropertyName == nameof(ReadingViewModel.IsEditMode)) ShowActions(); }
 
     /// <summary>La colonne Actions (Modifier / Supprimer) n'apparaît qu'en mode édition.</summary>
-    private void ShowActions() => ActionsColumn.Visibility = (DataContext as ReadingViewModel)?.IsEditMode == true ? Visibility.Visible : Visibility.Collapsed;
+    private void ShowActions()
+    {
+        var edit = (DataContext as ReadingViewModel)?.IsEditMode == true;
+        ActionsColumn.Visibility = edit ? Visibility.Visible : Visibility.Collapsed;
+        SaisieGrid.FrozenColumnCount = edit ? 1 : 0; // épinglée : le défilement horizontal (nombreuses semaines) ne la cache plus
+    }
 
     private void RebuildColumns()
     {
