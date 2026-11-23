@@ -69,6 +69,18 @@ public class CoreTests
     }
 
     [Fact]
+    public void Period_start_month_shifts_quarter_semester_year()
+    {
+        // trimestre commençant en février : fév-avr, mai-juil, août-oct, nov-janv
+        Assert.Equal(new DateTime(2026, 11, 1), Periods.Start(Recurrence.Trimestriel, new DateTime(2027, 1, 15), 2));
+        Assert.Equal(new DateTime(2026, 8, 1), Periods.Start(Recurrence.Trimestriel, new DateTime(2026, 10, 31), 2));
+        Assert.Equal(new DateTime(2026, 4, 1), Periods.Start(Recurrence.Annuel, new DateTime(2026, 11, 23), 4));
+        Assert.Equal(new DateTime(2026, 4, 1), Periods.Start(Recurrence.Annuel, new DateTime(2027, 3, 31), 4));
+        Assert.Equal(new DateTime(2026, 9, 1), Periods.Start(Recurrence.Semestriel, new DateTime(2026, 11, 23), 3));
+        Assert.Equal(new DateTime(2026, 10, 1), Periods.Start(Recurrence.Trimestriel, new DateTime(2026, 11, 23))); // défaut : calendaire
+    }
+
+    [Fact]
     public void Weekly_reading_is_late_from_date_plus_one_day()
     {
         var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");

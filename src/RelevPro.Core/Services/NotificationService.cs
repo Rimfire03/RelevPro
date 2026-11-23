@@ -42,7 +42,7 @@ public static class NotificationService
         }
         foreach (var line in lines.Where(l => l.ReadingView is not null && !(l.Meter?.Arrete ?? false)).OrderBy(l => l.ReadingView!.Ordre).ThenBy(l => l.Ordre))
         {
-            var current = Periods.Start(line.Recurrence, today);
+            var current = Periods.Start(line.Recurrence, today, line.MoisPeriode(line.ReadingView!.Recurrence));
             var previous = Periods.Previous(line.Recurrence, current);
             if (line.CreatedOn.Date < current && !IsDone(line, previous, readingDates, completions)) Group(late, line, previous);
             // relevé hebdomadaire : en retard dès date + 1 jour (le lundi de sa semaine est passé), pas seulement la semaine suivante

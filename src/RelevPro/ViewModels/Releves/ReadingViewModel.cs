@@ -201,12 +201,13 @@ public partial class ReadingViewModel : EditableScreenViewModel
             var stopped = l.Meter?.Arrete ?? false;
             var all = l.Kind == LineKind.Compteur ? readings[l.MeterId ?? 0].ToList() : new List<MeterReading>();
             var cells = new List<(Periods.Column Col, DateTime Lp, DateTime LpEnd, bool Active, bool Editable, MeterReading? Existing, bool Done)>();
-            var currentStart = Periods.Start(r, today);
+            var mp = l.MoisPeriode(_rec);
+            var currentStart = Periods.Start(r, today, mp);
             var previousStart = Periods.Previous(r, currentStart);
             foreach (var c in cols)
             {
-                var active = Periods.IsActive(_rec, r, c.Start);
-                var lp = Periods.Start(r, c.Start);
+                var active = Periods.IsActive(_rec, r, c.Start, mp);
+                var lp = Periods.Start(r, c.Start, mp);
                 var lpEnd = Periods.Next(r, lp);
                 MeterReading? existing = null;
                 var done = false;
@@ -406,6 +407,8 @@ public partial class ReadingViewModel : EditableScreenViewModel
 
     /// <summary>Récurrences permises : celle de la vue ou plus lentes (une ligne n'est jamais plus rapide que sa vue).</summary>
     private List<Recurrence> Allowed => Enum.GetValues<Recurrence>().Where(r => r >= _rec).ToList();
+    private static readonly List<string> MonthNames = Enumerable.Range(1, 12).Select(i => System.Globalization.CultureInfo.GetCultureInfo("fr-FR").TextInfo.ToTitleCase(System.Globalization.CultureInfo.GetCultureInfo("fr-FR").DateTimeFormat.GetMonthName(i))).ToList();
+    private const string StartMonthLabel = "Mois de début de la période de calcul (lignes trimestrielles, semestrielles ou annuelles, plus lentes que la vue)";
     private List<string> AllowedNames => Allowed.Select(Periods.Name).ToList();
 
     private string LastGroup() => App.Db.ViewLines.Where(l => l.ReadingViewId == _viewId).OrderByDescending(l => l.Ordre).Select(l => l.Groupe).FirstOrDefault() ?? string.Empty;
@@ -414,17 +417,18 @@ public partial class ReadingViewModel : EditableScreenViewModel
     private void AddMeterLine()
     {
         if (!App.GuardWritable() || !GuardEdit()) return;
-        var rec = 0;
+        var rec = 0; var mois = 0;
         var groupe = LastGroup();
         var meter = new Meter { Ordre = (App.Db.Meters.Max(x => (int?)x.Ordre) ?? -1) + 1 };
         var extra = new[]
         {
             EditField.ComboField("Récurrence de saisie", AllowedNames, () => rec, v => rec = v),
+            EditField.ComboField(StartMonthLabel, MonthNames, () => mois, v => mois = v),
             EditField.Text("Section (regroupe les lignes, facultatif)", () => groupe, v => groupe = v)
         };
         if (!MeterEditor.Edit("Nouveau compteur", meter, extra)) return;
         // le compteur appartient à cette vue seule : ses relevés ne sont pas partagés
-        AddLine(new ViewLine { Kind = LineKind.Compteur, Meter = meter, Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)], Groupe = groupe.Trim() });
+        AddLine(new ViewLine { Kind = LineKind.Compteur, Meter = meter, Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)], MoisDebut = mois + 1, Groupe = groupe.Trim() });
     }
 
     /// <summary>Ligne sélectionnée dans la grille de saisie : cible des boutons « Modifier » / « Supprimer » du bandeau.</summary>
@@ -441,16 +445,17 @@ public partial class ReadingViewModel : EditableScreenViewModel
     {
         if (!App.GuardWritable() || !GuardEdit()) return;
         var label = string.Empty;
-        var rec = 0;
+        var rec = 0; var mois = 0;
         var groupe = LastGroup();
         var fields = new List<EditField>
         {
             EditField.Text("Tâche à cocher", () => label, v => label = v, required: true),
             EditField.ComboField("Récurrence de saisie", AllowedNames, () => rec, v => rec = v),
+            EditField.ComboField(StartMonthLabel, MonthNames, () => mois, v => mois = v),
             EditField.Text("Section (regroupe les lignes, facultatif)", () => groupe, v => groupe = v)
         };
         if (!App.Dialogs.EditFields("Ajouter une tâche à la vue", fields)) return;
-        AddLine(new ViewLine { Kind = LineKind.Tache, Libelle = label.Trim(), Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)], Groupe = groupe.Trim() });
+        AddLine(new ViewLine { Kind = LineKind.Tache, Libelle = label.Trim(), Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)], MoisDebut = mois + 1, Groupe = groupe.Trim() });
     }
 
     private void AddLine(ViewLine line)
@@ -471,9 +476,11 @@ public partial class ReadingViewModel : EditableScreenViewModel
         var label = line.Libelle;
         var groupe = line.Groupe;
         var rec = Math.Max(0, Allowed.IndexOf(LineRec(line)));
+        var mois = Math.Clamp(line.MoisDebut, 1, 12) - 1;
         var fields = new List<EditField>();
         if (line.Kind == LineKind.Tache) fields.Add(EditField.Text("Tâche à cocher", () => label, v => label = v, required: true));
         fields.Add(EditField.ComboField("Récurrence de saisie", AllowedNames, () => rec, v => rec = v));
+        fields.Add(EditField.ComboField(StartMonthLabel, MonthNames, () => mois, v => mois = v));
         fields.Add(EditField.Text("Section (regroupe les lignes, facultatif)", () => groupe, v => groupe = v));
         if (line.Kind == LineKind.Compteur)
         {
@@ -483,6 +490,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
         else if (!App.Dialogs.EditFields("Modifier la ligne", fields)) return;
         if (line.Kind == LineKind.Tache) line.Libelle = label.Trim();
         line.Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)];
+        line.MoisDebut = mois + 1;
         line.Groupe = groupe.Trim();
         App.Db.SaveChanges();
         Reload();
