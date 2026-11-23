@@ -195,6 +195,13 @@ public partial class DynamicEditWindow : Window
                     });
                     break;
                 }
+                case EditFieldType.Bool:
+                {
+                    var cb = new CheckBox { Content = "Oui", IsChecked = field.GetValue() is true };
+                    container.Children.Add(cb);
+                    _readers.Add(() => { field.SetValue(cb.IsChecked == true); return true; });
+                    break;
+                }
                 case EditFieldType.Combo:
                 {
                     var combo = new ComboBox();

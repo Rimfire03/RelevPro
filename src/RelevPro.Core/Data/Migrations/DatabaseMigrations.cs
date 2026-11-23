@@ -15,7 +15,11 @@ internal static class DatabaseMigrations
         (3, "Catalogues (unités, familles) et famille des compteurs", AddCatalogs),
         (4, "Compteurs arrêtés", AddStoppedFlag),
         (5, "Tour et remplacement de compteur", AddRollover),
+        (6, "Compteurs : valeurs tronquées", AddTruncate),
     };
+
+    private static void AddTruncate(RelevDbContext db) =>
+        Add(db, "Meters", "Tronquer", "INTEGER NOT NULL DEFAULT 0", "boolean NOT NULL DEFAULT false", "tinyint(1) NOT NULL DEFAULT 0", "bit NOT NULL DEFAULT 0");
 
     private static void AddRollover(RelevDbContext db)
     {
@@ -83,6 +87,7 @@ internal static class DatabaseMigrations
         (3, "Catalogues (unités, familles) et famille des compteurs", AddCatalogs),
         (4, "Compteurs arrêtés", AddStoppedFlag),
         (5, "Tour et remplacement de compteur", AddRollover),
+        (6, "Compteurs : valeurs tronquées", AddTruncate),
     };
 
     internal static IReadOnlyList<(int Version, string Description, Action<RelevDbContext> Apply)> ServerPlan(int fromVersion)

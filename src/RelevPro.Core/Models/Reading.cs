@@ -49,6 +49,9 @@ public class Meter : ISiteScoped
     /// <summary>Valeur à laquelle le compteur repasse à 0 (ex. 100000 pour 5 chiffres). 0 = automatique : puissance de 10
     /// juste au-dessus du plus grand relevé (voir <see cref="Services.ConsumptionService.Capacity"/>).</summary>
     public decimal Capacite { get; set; }
+
+    /// <summary>Vrai : les valeurs saisies sont tronquées (chiffres après la virgule supprimés) avant stockage.</summary>
+    public bool Tronquer { get; set; }
 }
 
 /// <summary>Vue de relevé : un écran de saisie regroupant des lignes (compteurs ou tâches).</summary>

@@ -321,6 +321,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
             return;
         }
         var meter = App.Db.Meters.First(m => m.Id == cell.Row.Line.MeterId);
+        if (meter.Tronquer) value = Math.Truncate(value);
         var all = App.Db.MeterReadings.Where(r => r.MeterId == meter.Id).ToList();
         var existing = cell.ReadingId is { } id ? all.FirstOrDefault(r => r.Id == id) : null;
         if (existing is not null && existing.Value == value) { ReloadLines(); return; }

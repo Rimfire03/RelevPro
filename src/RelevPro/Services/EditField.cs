@@ -9,7 +9,8 @@ public enum EditFieldType
     Date,
     Months,
     Combo,
-    Checklist
+    Checklist,
+    Bool
 }
 
 public class EditField
@@ -100,6 +101,14 @@ public class EditField
         Type = EditFieldType.Decimal,
         GetValue = () => get(),
         SetValue = v => set(decimal.TryParse(v?.ToString(), out var parsed) ? parsed : 0m)
+    };
+
+    public static EditField BoolField(string label, Func<bool> get, Action<bool> set) => new()
+    {
+        Label = label,
+        Type = EditFieldType.Bool,
+        GetValue = () => get(),
+        SetValue = v => set(v is true)
     };
 
     public static EditField DateField(string label, Func<DateOnly?> get, Action<DateOnly?> set) => new()
