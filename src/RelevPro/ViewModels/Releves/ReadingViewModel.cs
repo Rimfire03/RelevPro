@@ -73,9 +73,10 @@ public partial class LineRow : ObservableObject
     public LineRow(ReadingViewModel owner, ViewLine line) { Owner = owner; Line = line; }
 
     public string Groupe => Line.Groupe;
-    public string GroupeShown { get; init; } = string.Empty;
+    public string GroupeShown { get; set; } = string.Empty;
+    public VerticalAlignment GroupeAlign { get; set; } = VerticalAlignment.Center;
     /// <summary>Dernière ligne de sa section : seule sa cellule « Section » garde un trait du bas (cellules fusionnées).</summary>
-    public bool IsGroupEnd { get; set; } = true;
+    public bool IsGroupEnd { get; set; }
     public string Title => Line.Titre;
     public bool IsMeter => Line.Kind == LineKind.Compteur;
     public bool IsTask => !IsMeter;
@@ -193,12 +194,10 @@ public partial class ReadingViewModel : EditableScreenViewModel
         var lineIds = lines.Select(l => l.Id).ToList();
         var completions = App.Db.TaskCompletions.AsNoTracking().Where(t => lineIds.Contains(t.ViewLineId)).ToList();
 
-        string? prevGroupe = null;
+        var built = new List<LineRow>();
         foreach (var l in lines)
         {
             var r = LineRec(l);
-            var groupeShown = l.Groupe == prevGroupe ? string.Empty : l.Groupe; // section affichée une fois par bloc de lignes
-            prevGroupe = l.Groupe;
             var stopped = l.Meter?.Arrete ?? false;
             var all = l.Kind == LineKind.Compteur ? readings[l.MeterId ?? 0].ToList() : new List<MeterReading>();
             var cells = new List<(Periods.Column Col, DateTime Lp, DateTime LpEnd, bool Active, bool Editable, MeterReading? Existing, bool Done)>();
@@ -240,11 +239,12 @@ public partial class ReadingViewModel : EditableScreenViewModel
             if (l.Kind == LineKind.Compteur && l.Meter is { Cumulatif: true } m && ConsumptionService.Consumption(all, wStart, wEnd, ConsumptionService.Capacity(m, all)) is { } v)
                 cons = $"{v.ToString("#,0.##", Fr)} {m.Unite}".Trim();
 
-            var row = new LineRow(this, l) { GroupeShown = groupeShown, ConsumptionText = cons, StatusText = status, StatusBrush = brush };
+            var row = new LineRow(this, l) { ConsumptionText = cons, StatusText = status, StatusBrush = brush };
             foreach (var x in cells)
             {
                 // même règle que le centre de notifications : période précédente non saisie (en retard) ou valeur forcée récente
-                var missing = x.Active && !stopped && x.Lp == previousStart && l.CreatedOn.Date < currentStart
+                var lateNow = r == Recurrence.Hebdo && x.Lp == currentStart && today > currentStart && l.CreatedOn.Date < today; // hebdo : retard dès date + 1 jour
+                var missing = x.Active && !stopped && ((x.Lp == previousStart && l.CreatedOn.Date < currentStart) || lateNow)
                               && (l.Kind == LineKind.Compteur ? x.Existing is null : !x.Done);
                 var forced = x.Existing is { Forced: true } f && f.Date >= today.AddDays(-NotificationService.AnomalyDays) && !stopped;
                 var cell = new GridCell(row, x.Col, x.Lp, x.Active, x.Editable, x.Existing?.Id, missing || forced)
@@ -254,9 +254,20 @@ public partial class ReadingViewModel : EditableScreenViewModel
                 };
                 row.Cells.Add(cell);
             }
-            Lines.Add(row);
+            built.Add(row);
         }
-        for (var i = 0; i < Lines.Count; i++) Lines[i].IsGroupEnd = i == Lines.Count - 1 || Lines[i + 1].Groupe != Lines[i].Groupe;
+        // section affichée au milieu de son bloc de lignes (cellules fusionnées) ; bloc pair : ligne du haut du milieu, calée en bas
+        for (var i = 0; i < built.Count;)
+        {
+            var j = i;
+            while (j + 1 < built.Count && built[j + 1].Groupe == built[i].Groupe) j++;
+            var n = j - i + 1;
+            var mid = built[i + (n - 1) / 2];
+            if (built[i].Groupe.Length > 0) { mid.GroupeShown = built[i].Groupe; mid.GroupeAlign = n % 2 == 0 ? VerticalAlignment.Bottom : VerticalAlignment.Center; }
+            built[j].IsGroupEnd = true;
+            i = j + 1;
+        }
+        foreach (var r in built) Lines.Add(r);
         Loaded = true;
     }
 

@@ -69,6 +69,29 @@ public class CoreTests
     }
 
     [Fact]
+    public void Weekly_reading_is_late_from_date_plus_one_day()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            var f = new DbContextFactory(path);
+            f.EnsureDatabaseUpToDate("test");
+            using var db = f.Create();
+            var meter = new Meter { Nom = "Eau" };
+            var view = new ReadingView { Nom = "V" };
+            db.Meters.Add(meter); db.ReadingViews.Add(view); db.SaveChanges();
+            db.ViewLines.Add(new ViewLine { ReadingViewId = view.Id, MeterId = meter.Id, Recurrence = Recurrence.Hebdo, CreatedOn = new DateTime(2026, 1, 1) });
+            db.MeterReadings.Add(new MeterReading { MeterId = meter.Id, Date = new DateTime(2026, 11, 2), Value = 10 }); // semaine précédente faite
+            db.SaveChanges();
+            var monday = NotificationService.Build(db, new DateTime(2026, 11, 9));
+            Assert.Contains(monday, x => x.Level == NotificationLevel.Pending);
+            Assert.DoesNotContain(monday, x => x.Level == NotificationLevel.Late);
+            Assert.Contains(NotificationService.Build(db, new DateTime(2026, 11, 10)), x => x.Level == NotificationLevel.Late);
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); try { File.Delete(path); } catch { } }
+    }
+
+    [Fact]
     public void Database_is_created_and_notifications_work()
     {
         var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");

@@ -45,7 +45,9 @@ public static class NotificationService
             var current = Periods.Start(line.Recurrence, today);
             var previous = Periods.Previous(line.Recurrence, current);
             if (line.CreatedOn.Date < current && !IsDone(line, previous, readingDates, completions)) Group(late, line, previous);
-            if (!IsDone(line, current, readingDates, completions)) Group(pending, line, current);
+            // relevé hebdomadaire : en retard dès date + 1 jour (le lundi de sa semaine est passé), pas seulement la semaine suivante
+            var lateNow = line.Recurrence == Recurrence.Hebdo && today > current && line.CreatedOn.Date < today;
+            if (!IsDone(line, current, readingDates, completions)) Group(lateNow ? late : pending, line, current);
         }
 
         var list = new List<AppNotification>();

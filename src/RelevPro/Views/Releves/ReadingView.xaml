@@ -58,7 +58,7 @@
                                     </Style>
                                 </DataGridTextColumn.CellStyle>
                                 <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock"><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="VerticalAlignment" Value="Top"/><Setter Property="Margin" Value="0,8,0,0"/></Style>
+                                    <Style TargetType="TextBlock"><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="VerticalAlignment" Value="{Binding GroupeAlign}"/><Setter Property="Margin" Value="4,0,0,2"/></Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
                             <DataGridTextColumn Header="Ligne" Binding="{Binding Title}" IsReadOnly="True" Width="300" MinWidth="120"/>
