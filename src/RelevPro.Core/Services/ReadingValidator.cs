@@ -52,27 +52,27 @@ public static class ReadingValidator
             return anomalies;
         }
 
-        if (prev is not null && meter.SeuilHaut > 0 && v - prev.Value > meter.SeuilHaut)
+        // rythme habituel : plus haut de la moyenne et du rythme maximal déjà observé, avec la marge du compteur
+        decimal? limit = null;
+        if (prev is not null && v >= prev.Value)
+        {
+            var history = list.Where(r => r.Date <= prev.Date).ToList();
+            if (AverageDailyRate(history) is > 0 and var a) limit = Math.Max(a, MaxDailyRate(history)) * (1 + meter.SeuilEcartPct / 100m);
+        }
+        var daysSincePrev = prev is null ? 1 : Math.Max(1, (date.Date - prev.Date).Days);
+        // seuil d'alarme fixe : ne sonne que si l'augmentation dépasse aussi le rythme habituel (quand l'historique permet de le calculer)
+        if (prev is not null && meter.SeuilHaut > 0 && v - prev.Value > meter.SeuilHaut && (limit is null || (v - prev.Value) / daysSincePrev > limit))
             anomalies.Add($"Augmentation au-dessus du seuil d'alarme : {Fmt(v - prev.Value)} > {Fmt(meter.SeuilHaut)} {meter.Unite} depuis le {prev.Date:dd/MM/yyyy}.");
         if (prev is not null && v < prev.Value)
             anomalies.Add($"Le compteur diminue : {Fmt(value)} < {Fmt(prev.Value)} (relevé du {prev.Date:dd/MM/yyyy}).");
         if (next is not null && value > next.Value)
             anomalies.Add($"Valeur supérieure au relevé suivant : {Fmt(value)} > {Fmt(next.Value)} (relevé du {next.Date:dd/MM/yyyy}).");
 
-        if (prev is not null && v >= prev.Value)
+        if (prev is not null && limit is { } lim && (v - prev.Value) / daysSincePrev > lim)
         {
-            var history = list.Where(r => r.Date <= prev.Date).ToList();
-            var avg = AverageDailyRate(history);
-            if (avg is > 0)
-            {
-                // référence = le plus haut de la moyenne et du rythme maximal déjà observé : une saison forte (hiver...) n'alerte plus
-                var days = Math.Max(1, (date.Date - prev.Date).Days);
-                var rate = (v - prev.Value) / days;
-                var limit = Math.Max(avg.Value, MaxDailyRate(history)) * (1 + meter.SeuilEcartPct / 100m);
-                if (rate > limit)
-                    anomalies.Add($"Écart trop grand : {Fmt(v - prev.Value)} {meter.Unite} en {days} j " +
-                                  $"(habituel : {Fmt(avg.Value * days)} {meter.Unite}, seuil +{meter.SeuilEcartPct} %).");
-            }
+            var avg = AverageDailyRate(list.Where(r => r.Date <= prev.Date).ToList())!.Value;
+            anomalies.Add($"Écart trop grand : {Fmt(v - prev.Value)} {meter.Unite} en {daysSincePrev} j " +
+                          $"(habituel : {Fmt(avg * daysSincePrev)} {meter.Unite}, seuil +{meter.SeuilEcartPct} %).");
         }
         return anomalies;
     }
