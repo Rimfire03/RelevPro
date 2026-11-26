@@ -88,19 +88,14 @@ public static class ConsumptionService
         }).ToList();
     }
 
-    /// <summary>Colonnes du tableau de statistiques (sans point dans les noms : la grille n'affiche pas ces colonnes).</summary>
-    public static readonly string[] StatColumns =
-    {
-        "Ligne", "Type", "Unité", "Relevés", "Dernier relevé", "Dernière valeur", "Consommation", "Moyenne par mois",
-        "Mois max", "Mois min", "Écart N-1", "Valeur min", "Valeur max", "Valeur moyenne", "Valeurs forcées", "Réalisation"
-    };
+    /// <summary>Données d'un graphique : une carte par ligne de la vue. <see cref="Months"/> / <see cref="PrevMonths"/> : consommation
+    /// de chaque mois (compteur cumulatif, année choisie et année précédente) ; <see cref="Points"/> : relevés de l'année (mesure) ;
+    /// <see cref="Done"/> / <see cref="Expected"/> : périodes réalisées / échues (tâche).</summary>
+    public sealed record ChartCard(string Title, string Kind, string Unit, decimal?[] Months, decimal?[] PrevMonths, decimal? Total, decimal? PrevTotal,
+        List<(DateTime Date, decimal Value)> Points, int Done, int Expected);
 
-    /// <summary>Statistiques de l'année pour chaque ligne de la vue (compteurs cumulatifs : consommation, moyenne, mois extrêmes,
-    /// écart avec l'an passé sur la même période ; mesures : min, max, moyenne ; tâches : taux de réalisation des périodes échues).
-    /// Une ligne = un tableau d'objets dans l'ordre de <see cref="StatColumns"/>.</summary>
-    public static List<object?[]> Stats(RelevDbContext db, int viewId, int year, DateTime today)
+    public static List<ChartCard> Charts(RelevDbContext db, int viewId, int year, DateTime today)
     {
-        var fr = System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
         var view = db.ReadingViews.AsNoTracking().FirstOrDefault(v => v.Id == viewId);
         var viewRec = view?.Recurrence ?? Recurrence.Hebdo;
         var lines = db.ViewLines.AsNoTracking().Include(l => l.Meter).Where(l => l.ReadingViewId == viewId).OrderBy(l => l.Ordre).ThenBy(l => l.Id).ToList();
@@ -113,7 +108,7 @@ public static class ConsumptionService
         var yStart = new DateTime(year, 1, 1);
         var yEnd = yStart.AddYears(1);
         var curEnd = year == today.Year ? today.Date.AddDays(1) : yEnd; // année en cours : jusqu'à aujourd'hui
-        var rows = new List<object?[]>();
+        var cards = new List<ChartCard>();
         foreach (var l in lines)
         {
             if (l.Meter?.Arrete == true) continue;
@@ -122,49 +117,31 @@ public static class ConsumptionService
                 var r = l.Recurrence < viewRec ? viewRec : l.Recurrence;
                 var mp = l.MoisPeriode(viewRec);
                 int expected = 0, ok = 0;
-                for (var p = Periods.Start(r, new[] { l.CreatedOn.Date, yStart }.Max(), mp); p < yEnd; p = Periods.Next(r, p))
+                for (var p0 = Periods.Start(r, new[] { l.CreatedOn.Date, yStart }.Max(), mp); p0 < yEnd; p0 = Periods.Next(r, p0))
                 {
-                    if (p < yStart) continue;
-                    if (Periods.Next(r, p) > today.Date) break; // période pas encore échue
+                    if (p0 < yStart) continue;
+                    if (Periods.Next(r, p0) > today.Date) break; // période pas encore échue
                     expected++;
-                    if (done.Contains((l.Id, p))) ok++;
+                    if (done.Contains((l.Id, p0))) ok++;
                 }
-                var t = new object?[StatColumns.Length];
-                t[0] = l.Titre; t[1] = "Tâche";
-                t[15] = expected == 0 ? "" : $"{ok}/{expected} ({100m * ok / expected:0} %)";
-                rows.Add(t);
+                cards.Add(new ChartCard(l.Titre, "Tache", "", new decimal?[12], new decimal?[12], null, null, new(), ok, expected));
                 continue;
             }
             var m = l.Meter!;
             var all = readings[m.Id].ToList();
-            var inYear = all.Where(x => x.Date >= yStart && x.Date < yEnd).ToList();
-            var last = inYear.LastOrDefault();
-            var row = new object?[StatColumns.Length];
-            row[0] = l.Titre; row[1] = m.Cumulatif ? "Compteur" : "Mesure"; row[2] = m.Unite;
-            row[3] = inYear.Count; row[4] = last is null ? null : last.Date.ToString("dd/MM/yyyy"); row[5] = last?.Value;
-            row[14] = inYear.Count(x => x.Forced);
-            if (m.Cumulatif)
+            if (!m.Cumulatif)
             {
-                var cap = Capacity(m, all);
-                row[6] = Consumption(all, yStart, curEnd, cap);
-                var months = Enumerable.Range(1, 12).Select(i => (Month: i, Value: Consumption(all, new DateTime(year, i, 1), new DateTime(year, i, 1).AddMonths(1), cap)))
-                    .Where(x => x.Value is not null).ToList();
-                if (months.Count > 0)
-                {
-                    row[7] = months.Average(x => x.Value!.Value);
-                    var hi = months.MaxBy(x => x.Value)!; var lo = months.MinBy(x => x.Value)!;
-                    row[8] = $"{fr.DateTimeFormat.GetMonthName(hi.Month)} ({hi.Value:#,0.##})";
-                    row[9] = $"{fr.DateTimeFormat.GetMonthName(lo.Month)} ({lo.Value:#,0.##})";
-                }
-                var prev = Consumption(all, yStart.AddYears(-1), curEnd.AddYears(-1), cap);
-                if (row[6] is decimal cur && prev is > 0) row[10] = $"{(cur - prev.Value) / prev.Value * 100m:+0;-0;0} %";
+                var pts = all.Where(x => x.Date >= yStart && x.Date < yEnd).Select(x => (x.Date, x.Value)).ToList();
+                cards.Add(new ChartCard(l.Titre, "Mesure", m.Unite, new decimal?[12], new decimal?[12], null, null, pts, 0, 0));
+                continue;
             }
-            else if (inYear.Count > 0)
-            {
-                row[11] = inYear.Min(x => x.Value); row[12] = inYear.Max(x => x.Value); row[13] = inYear.Average(x => x.Value);
-            }
-            rows.Add(row);
+            var cap = Capacity(m, all);
+            decimal?[] Months(int y) => Enumerable.Range(1, 12).Select(i => Consumption(all, new DateTime(y, i, 1), new DateTime(y, i, 1).AddMonths(1), cap)).ToArray();
+            var cur = Months(year); var prev = Months(year - 1);
+            var total = Consumption(all, yStart, curEnd, cap);
+            var prevTotal = Consumption(all, yStart.AddYears(-1), curEnd.AddYears(-1), cap); // même période l'an passé
+            cards.Add(new ChartCard(l.Titre, "Compteur", m.Unite, cur, prev, total, prevTotal, new(), 0, 0));
         }
-        return rows;
+        return cards;
     }
 }

@@ -93,6 +93,54 @@ public partial class LineRow : ObservableObject
     [RelayCommand] private void Delete() => Owner.DeleteLine(this);
 }
 
+/// <summary>Carte de l'onglet Statistiques : un graphique par ligne (barres mensuelles, courbe ou taux de réalisation).</summary>
+public sealed class ChartCardVm
+{
+    private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
+    public ConsumptionService.ChartCard Card { get; }
+    public int Year { get; }
+    public ChartCardVm(ConsumptionService.ChartCard card, int year) { Card = card; Year = year; }
+
+    public string Title => Card.Title;
+    public bool IsCounter => Card.Kind == "Compteur";
+    public bool IsMeasure => Card.Kind == "Mesure";
+    public bool IsTask => Card.Kind == "Tache";
+    public decimal?[] Months => Card.Months;
+    public decimal?[] PrevMonths => Card.PrevMonths;
+    public List<(DateTime Date, decimal Value)> Points => Card.Points;
+    public double Ratio => Card.Expected == 0 ? 0 : (double)Card.Done / Card.Expected;
+    public int Done => Card.Done;
+    public int Expected => Card.Expected;
+    public string Unit => Card.Unit;
+    public int PrevYear => Year - 1;
+    public bool IsEmptyTask => IsTask && Card.Expected == 0;
+
+    public string Headline => IsCounter ? (Card.Total is { } t ? $"{t.ToString("#,0.##", Fr)} {Card.Unit}".Trim() : "—")
+        : IsMeasure ? (Points.Count == 0 ? "—" : $"{Points[^1].Value.ToString("#,0.##", Fr)} {Card.Unit}".Trim())
+        : Expected == 0 ? "—" : $"{Done}/{Expected}";
+
+    public string SubLine
+    {
+        get
+        {
+            if (IsCounter)
+            {
+                if (Card.Total is { } t && Card.PrevTotal is > 0 and var p)
+                {
+                    var d = (t - p) / p * 100m;
+                    return $"{(d > 0 ? "▲" : d < 0 ? "▼" : "=")} {Math.Abs(d):0} % vs {PrevYear} (même période)";
+                }
+                return $"Consommation {Year}";
+            }
+            if (IsMeasure) return Points.Count == 0 ? "Aucun relevé" : $"dernier relevé · min {Points.Min(x => x.Value):#,0.##} · max {Points.Max(x => x.Value):#,0.##}";
+            return Card.Expected == 0 ? "Aucune période échue" : $"périodes réalisées en {Year}";
+        }
+    }
+
+    /// <summary>Sens de l'évolution (compteur) : sert à colorer la ligne de synthèse.</summary>
+    public string Trend => IsCounter && Card.Total is { } t && Card.PrevTotal is > 0 and var p ? (t > p ? "up" : t < p ? "down" : "flat") : "flat";
+}
+
 public partial class ReadingViewModel : EditableScreenViewModel
 {
     private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
@@ -117,7 +165,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
     [ObservableProperty] private int _selectedYear = DateTime.Today.Year;
     [ObservableProperty] private DataView? _monthlyTable;
     [ObservableProperty] private DataView? _yearlyTable;
-    [ObservableProperty] private DataView? _statsTable;
+    public ObservableCollection<ChartCardVm> ChartCards { get; } = new();
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty] private string _periodTitle = string.Empty;
     [ObservableProperty] private string _consumptionHeader = "Consommation";
@@ -281,8 +329,11 @@ public partial class ReadingViewModel : EditableScreenViewModel
         YearlyTable = Table(cols, rows.Select(r => new object?[] { r.Compteur, r.Unite }.Concat(r.Values.Cast<object?>()).ToArray()));
     }
 
-    private void ReloadStats() =>
-        StatsTable = Table(ConsumptionService.StatColumns.ToList(), ConsumptionService.Stats(App.Db, _viewId, SelectedYear, DateTime.Today));
+    private void ReloadStats()
+    {
+        ChartCards.Clear();
+        foreach (var c in ConsumptionService.Charts(App.Db, _viewId, SelectedYear, DateTime.Today)) ChartCards.Add(new ChartCardVm(c, SelectedYear));
+    }
 
     private static DataView Table(List<string> cols, IEnumerable<object?[]> rows)
     {

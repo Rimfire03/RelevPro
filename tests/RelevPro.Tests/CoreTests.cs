@@ -69,7 +69,7 @@ public class CoreTests
     }
 
     [Fact]
-    public void Stats_per_view_cover_meters_and_tasks()
+    public void Charts_per_view_cover_meters_and_tasks()
     {
         var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");
         try
@@ -94,12 +94,13 @@ public class CoreTests
             db.TaskCompletions.Add(new TaskCompletion { ViewLineId = line.Id, PeriodStart = new DateTime(2026, 1, 1), CompletedAt = DateTime.Now, CompletedBy = "t" });
             db.SaveChanges();
 
-            var rows = ConsumptionService.Stats(db, view.Id, 2026, new DateTime(2026, 4, 15));
+            var rows = ConsumptionService.Charts(db, view.Id, 2026, new DateTime(2026, 4, 15));
             Assert.Equal(3, rows.Count);
-            Assert.Equal(100m, rows[0][6]);          // 200 - 100 de janvier à avril
-            Assert.Equal(4, rows[0][3]);
-            Assert.Equal(10m, rows[1][11]); Assert.Equal(20m, rows[1][12]); Assert.Equal(15m, rows[1][13]);
-            Assert.Equal("1/3 (33 %)", rows[2][15]); // janv., févr., mars échus
+            Assert.Equal(100m, rows[0].Total);            // 200 - 100 de janvier à avril
+            Assert.Equal(50m, rows[0].Months[0]);          // janvier : 100 -> 150
+            Assert.Equal(20m, rows[0].Months[1]);
+            Assert.Equal(2, rows[1].Points.Count);          // mesure : points de l'année
+            Assert.Equal((1, 3), (rows[2].Done, rows[2].Expected)); // janv., févr., mars échus
         }
         finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); try { File.Delete(path); } catch { } }
     }
