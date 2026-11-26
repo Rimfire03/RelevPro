@@ -17,7 +17,11 @@ internal static class DatabaseMigrations
         (5, "Tour et remplacement de compteur", AddRollover),
         (6, "Compteurs : valeurs tronquées", AddTruncate),
         (7, "Lignes : mois de début de période", AddStartMonth),
+        (8, "Lignes : exclure de la consommation", AddExcludeConso),
     };
+
+    private static void AddExcludeConso(RelevDbContext db) =>
+        Add(db, "ViewLines", "ExclureConso", "INTEGER NOT NULL DEFAULT 0", "boolean NOT NULL DEFAULT false", "tinyint(1) NOT NULL DEFAULT 0", "bit NOT NULL DEFAULT 0");
 
     private static void AddStartMonth(RelevDbContext db) =>
         Add(db, "ViewLines", "MoisDebut", "INTEGER NOT NULL DEFAULT 1", "integer NOT NULL DEFAULT 1", "int NOT NULL DEFAULT 1", "int NOT NULL DEFAULT 1");
@@ -93,6 +97,7 @@ internal static class DatabaseMigrations
         (5, "Tour et remplacement de compteur", AddRollover),
         (6, "Compteurs : valeurs tronquées", AddTruncate),
         (7, "Lignes : mois de début de période", AddStartMonth),
+        (8, "Lignes : exclure de la consommation", AddExcludeConso),
     };
 
     internal static IReadOnlyList<(int Version, string Description, Action<RelevDbContext> Apply)> ServerPlan(int fromVersion)

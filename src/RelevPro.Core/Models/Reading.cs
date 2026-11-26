@@ -92,6 +92,8 @@ public class ViewLine : ISiteScoped
 
     /// <summary>Mois (1-12) de début de la période de calcul des lignes trimestrielles, semestrielles et annuelles.</summary>
     public int MoisDebut { get; set; } = 1;
+    /// <summary>Ligne ignorée par la consommation mensuelle / annuelle et les statistiques (la saisie reste possible).</summary>
+    public bool ExclureConso { get; set; }
 
     /// <summary>Mois de début réellement appliqué : seulement pour une ligne plus lente que sa vue (même fréquence = période de la vue).</summary>
     public int MoisPeriode(Recurrence viewRec) => Recurrence > viewRec && Recurrence >= Recurrence.Trimestriel ? MoisDebut : 1;

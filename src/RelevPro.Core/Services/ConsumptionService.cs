@@ -71,7 +71,7 @@ public static class ConsumptionService
     }
 
     private static List<int> MeterIds(RelevDbContext db, int viewId) =>
-        db.ViewLines.AsNoTracking().Where(l => l.ReadingViewId == viewId && l.MeterId != null).Select(l => l.MeterId!.Value).Distinct().ToList();
+        db.ViewLines.AsNoTracking().Where(l => l.ReadingViewId == viewId && l.MeterId != null && !l.ExclureConso).Select(l => l.MeterId!.Value).Distinct().ToList();
 
     private static List<Row> Build(RelevDbContext db, int viewId, List<(DateTime Start, DateTime End)> periods, bool total)
     {
@@ -111,7 +111,7 @@ public static class ConsumptionService
         var cards = new List<ChartCard>();
         foreach (var l in lines)
         {
-            if (l.Meter?.Arrete == true) continue;
+            if (l.Meter?.Arrete == true || (l.ExclureConso && l.Kind != LineKind.Tache)) continue;
             if (l.Kind == LineKind.Tache)
             {
                 var r = l.Recurrence < viewRec ? viewRec : l.Recurrence;

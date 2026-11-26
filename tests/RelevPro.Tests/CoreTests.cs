@@ -154,6 +154,29 @@ public class CoreTests
     }
 
     [Fact]
+    public void Excluded_line_is_left_out_of_consumption_and_charts()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            var f = new DbContextFactory(path);
+            f.EnsureDatabaseUpToDate("test");
+            using var db = f.Create();
+            var view = new ReadingView { Nom = "V", Recurrence = Recurrence.Mensuel };
+            var a = new Meter { Nom = "A" }; var b = new Meter { Nom = "B" };
+            db.ReadingViews.Add(view); db.Meters.AddRange(a, b); db.SaveChanges();
+            db.ViewLines.AddRange(
+                new ViewLine { ReadingViewId = view.Id, MeterId = a.Id, Recurrence = Recurrence.Mensuel, CreatedOn = new DateTime(2026, 1, 1) },
+                new ViewLine { ReadingViewId = view.Id, MeterId = b.Id, Recurrence = Recurrence.Mensuel, CreatedOn = new DateTime(2026, 1, 1), ExclureConso = true });
+            db.SaveChanges();
+            Assert.Equal("A", Assert.Single(ConsumptionService.Monthly(db, view.Id, 2026)).Compteur);
+            Assert.DoesNotContain(ConsumptionService.Yearly(db, view.Id, new[] { 2026 }), r => r.Compteur == "B");
+            Assert.DoesNotContain(ConsumptionService.Charts(db, view.Id, 2026, new DateTime(2026, 6, 1)), c => c.Title.Contains("B"));
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); try { File.Delete(path); } catch { } }
+    }
+
+    [Fact]
     public void Period_start_month_shifts_quarter_semester_year()
     {
         // trimestre commençant en février : fév-avr, mai-juil, août-oct, nov-janv

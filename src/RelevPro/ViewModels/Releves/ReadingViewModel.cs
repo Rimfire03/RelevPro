@@ -552,11 +552,13 @@ public partial class ReadingViewModel : EditableScreenViewModel
         var groupe = line.Groupe;
         var rec = Math.Max(0, Allowed.IndexOf(LineRec(line)));
         var mois = Math.Clamp(line.MoisDebut, 1, 12) - 1;
+        var exclure = line.ExclureConso;
         var fields = new List<EditField>();
         if (line.Kind == LineKind.Tache) fields.Add(EditField.Text("Tâche à cocher", () => label, v => label = v, required: true));
         fields.Add(EditField.ComboField("Récurrence de saisie", AllowedNames, () => rec, v => rec = v));
         fields.Add(EditField.ComboField(StartMonthLabel, MonthNames, () => mois, v => mois = v));
         fields.Add(EditField.Text("Section (regroupe les lignes, facultatif)", () => groupe, v => groupe = v));
+        if (line.Kind == LineKind.Compteur) fields.Add(EditField.BoolField("Exclure cette ligne de la consommation (mensuelle, annuelle) et des statistiques", () => exclure, v => exclure = v));
         if (line.Kind == LineKind.Compteur)
         {
             var meter = App.Db.Meters.First(m => m.Id == line.MeterId);
@@ -566,6 +568,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
         if (line.Kind == LineKind.Tache) line.Libelle = label.Trim();
         line.Recurrence = Allowed[Math.Clamp(rec, 0, Allowed.Count - 1)];
         line.MoisDebut = mois + 1;
+        if (line.Kind == LineKind.Compteur) line.ExclureConso = exclure;
         line.Groupe = groupe.Trim();
         App.Db.SaveChanges();
         Reload();
