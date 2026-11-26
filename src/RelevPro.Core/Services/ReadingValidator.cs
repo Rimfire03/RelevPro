@@ -9,7 +9,7 @@ namespace RelevPro.Core.Services;
 public static class ReadingValidator
 {
     /// <summary>Nombre d'intervalles précédents utilisés pour la moyenne.</summary>
-    public const int HistorySize = 6;
+    public const int HistorySize = 12;
 
     /// <summary>Recontrôle les relevés forcés (valeurs aberrantes) : ceux qui ne présentent plus d'anomalie (valeur voisine corrigée,
     /// seuil modifié...) redeviennent normaux ; les autres voient leur message mis à jour. Retourne le nombre de relevés modifiés.</summary>
@@ -61,18 +61,28 @@ public static class ReadingValidator
 
         if (prev is not null && v >= prev.Value)
         {
-            var avg = AverageDailyRate(list.Where(r => r.Date <= prev.Date).ToList());
+            var history = list.Where(r => r.Date <= prev.Date).ToList();
+            var avg = AverageDailyRate(history);
             if (avg is > 0)
             {
+                // référence = le plus haut de la moyenne et du rythme maximal déjà observé : une saison forte (hiver...) n'alerte plus
                 var days = Math.Max(1, (date.Date - prev.Date).Days);
                 var rate = (v - prev.Value) / days;
-                var limit = avg.Value * (1 + meter.SeuilEcartPct / 100m);
+                var limit = Math.Max(avg.Value, MaxDailyRate(history)) * (1 + meter.SeuilEcartPct / 100m);
                 if (rate > limit)
                     anomalies.Add($"Écart trop grand : {Fmt(v - prev.Value)} {meter.Unite} en {days} j " +
                                   $"(habituel : {Fmt(avg.Value * days)} {meter.Unite}, seuil +{meter.SeuilEcartPct} %).");
             }
         }
         return anomalies;
+    }
+
+    private static decimal MaxDailyRate(IReadOnlyList<MeterReading> ordered)
+    {
+        decimal max = 0; var n = 0;
+        for (var i = ordered.Count - 1; i > 0 && n < HistorySize; i--, n++)
+            max = Math.Max(max, (ordered[i].Value - ordered[i - 1].Value) / Math.Max(1, (ordered[i].Date - ordered[i - 1].Date).Days));
+        return max;
     }
 
     /// <summary>Consommation journalière moyenne sur les derniers intervalles croissants (les baisses forcées sont ignorées).</summary>

@@ -177,6 +177,15 @@ public class CoreTests
     }
 
     [Fact]
+    public void Seasonal_peak_already_seen_does_not_raise_gap_alert()
+    {
+        var hist = new[] { (1, 0m), (8, 10m), (15, 20m), (22, 120m), (29, 130m), (36, 140m) }
+            .Select(x => new MeterReading { Date = new DateTime(2026, 1, 1).AddDays(x.Item1 - 1), Value = x.Item2 }).ToList();
+        // 7 j à 12/j : au-dessus de 2 x la moyenne, mais déjà vu (pic de 100 en 7 j)
+        Assert.Empty(ReadingValidator.Check(new Meter { Nom = "X", SeuilEcartPct = 100 }, new DateTime(2026, 2, 12), 224, hist));
+    }
+
+    [Fact]
     public void Period_start_month_shifts_quarter_semester_year()
     {
         // trimestre commençant en février : fév-avr, mai-juil, août-oct, nov-janv
