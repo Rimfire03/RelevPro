@@ -294,7 +294,19 @@ public partial class ReadingViewModel : EditableScreenViewModel
     {
         if (!App.GuardWritable()) { ReloadLines(); return; }
         var text = (cell.Text ?? "").Trim().Replace(" ", "");
-        if (text.Length == 0) { ReloadLines(); return; } // effacer une case ne supprime pas le relevé
+        if (text.Length == 0)
+        {
+            // case effacée : le relevé est supprimé, la case repasse à « non saisie »
+            if (cell.ReadingId is { } rid && App.Db.MeterReadings.FirstOrDefault(r => r.Id == rid) is { } old)
+            {
+                App.Db.MeterReadings.Remove(old);
+                App.Db.SaveChanges();
+                Reload();
+                _main.RefreshNotificationBadge();
+            }
+            else ReloadLines();
+            return;
+        }
         if (!decimal.TryParse(text.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out var value))
         {
             App.Dialogs.ShowMessage("Valeur invalide", "Saisissez un nombre (ex. 1234,5).");
