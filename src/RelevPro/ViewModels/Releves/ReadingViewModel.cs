@@ -35,15 +35,25 @@ public partial class GridCell : ObservableObject
         b.Freeze();
         return b;
     }
-    public System.Windows.Media.Brush? Background => Alert ? AlertBrush : null;
-    public System.Windows.Media.Brush BoxBackground => Alert ? AlertBrush : System.Windows.Media.Brushes.White;
+    /// <summary>Valeur aberrante : relevé forcé malgré une alerte, pas encore validé (clic droit sur la case). Couleur propre (violet pastel).</summary>
+    public bool Aberrant { get; }
+    public string? Tip { get; }
+    private static readonly System.Windows.Media.Brush AberrantBrush = MakeAberrantBrush();
+    private static System.Windows.Media.Brush MakeAberrantBrush()
+    {
+        var b = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE9, 0xD5, 0xFF));
+        b.Freeze();
+        return b;
+    }
+    public System.Windows.Media.Brush? Background => Aberrant ? AberrantBrush : Alert ? AlertBrush : null;
+    public System.Windows.Media.Brush BoxBackground => Aberrant ? AberrantBrush : Alert ? AlertBrush : System.Windows.Media.Brushes.White;
 
     [ObservableProperty] private string _text = string.Empty;
     [ObservableProperty] private bool _isDone;
 
-    public GridCell(LineRow row, Periods.Column column, DateTime periodStart, bool active, bool editable, int? readingId, bool alert = false)
+    public GridCell(LineRow row, Periods.Column column, DateTime periodStart, bool active, bool editable, int? readingId, bool alert = false, bool aberrant = false, string? tip = null)
     {
-        _row = row; Column = column; PeriodStart = periodStart; Active = active; Editable = editable; ReadingId = readingId; Alert = alert;
+        _row = row; Column = column; PeriodStart = periodStart; Active = active; Editable = editable; ReadingId = readingId; Alert = alert; Aberrant = aberrant; Tip = tip;
     }
 
     public Visibility BoxVisibility => Editable && _row.IsMeter ? Visibility.Visible : Visibility.Collapsed;
@@ -286,8 +296,9 @@ public partial class ReadingViewModel : EditableScreenViewModel
                 var lateNow = r == Recurrence.Hebdo && x.Lp == currentStart && today > currentStart && l.CreatedOn.Date < today; // hebdo : retard dès date + 1 jour
                 var missing = x.Active && !stopped && ((x.Lp == previousStart && l.CreatedOn.Date < currentStart) || lateNow)
                               && (l.Kind == LineKind.Compteur ? x.Existing is null : !x.Done);
-                var forced = x.Existing is { Forced: true } f && f.Date >= today.AddDays(-NotificationService.AnomalyDays) && !stopped;
-                var cell = new GridCell(row, x.Col, x.Lp, x.Active, x.Editable, x.Existing?.Id, missing || forced)
+                var aberrant = x.Existing is { Forced: true } && !stopped;
+                var cell = new GridCell(row, x.Col, x.Lp, x.Active, x.Editable, x.Existing?.Id, missing, aberrant,
+                    aberrant ? "Valeur aberrante : " + x.Existing!.Anomaly + "\nClic droit pour la valider." : null)
                 {
                     Text = x.Existing is null ? string.Empty : x.Existing.Value.ToString("0.####", Fr),
                     IsDone = x.Done
@@ -345,6 +356,19 @@ public partial class ReadingViewModel : EditableScreenViewModel
     }
 
     // ---- Saisie ----
+
+    /// <summary>Clic droit « valider » : la valeur aberrante est reconnue normale (plus colorée, plus de notification).</summary>
+    internal void ValidateReading(GridCell cell)
+    {
+        if (!App.GuardWritable()) return;
+        if (cell.ReadingId is not { } id || App.Db.MeterReadings.FirstOrDefault(r => r.Id == id) is not { } r) return;
+        r.Forced = false;
+        r.Anomaly = string.Empty;
+        App.Db.SaveChanges();
+        StatusMessage = "Valeur validée comme normale.";
+        Reload();
+        _main.RefreshNotificationBadge();
+    }
 
     internal void SaveCell(GridCell cell)
     {

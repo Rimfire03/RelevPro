@@ -117,6 +117,17 @@ public partial class ReadingView : UserControl
         box.SetValue(FrameworkElement.MarginProperty, new Thickness(3, 2, 3, 2));
         box.SetValue(Control.PaddingProperty, new Thickness(6, 0, 6, 0)); // le style du thème (padding 8,7) rogne le texte dans une ligne de 34 px
         box.SetValue(FrameworkElement.MinHeightProperty, 0.0);
+        box.SetBinding(FrameworkElement.ToolTipProperty, new Binding($"Cells[{i}].Tip"));
+        // clic droit : menu « valider » uniquement sur une valeur aberrante (sinon menu standard du champ de saisie)
+        box.AddHandler(FrameworkElement.ContextMenuOpeningEvent, new ContextMenuEventHandler((s, e) =>
+        {
+            if (s is not TextBox tb || tb.DataContext is not LineRow row || i >= row.Cells.Count) return;
+            var cell = row.Cells[i];
+            if (!cell.Aberrant) { tb.ContextMenu = null; return; }
+            var item = new MenuItem { Header = "Valider cette valeur (la marquer normale)" };
+            item.Click += (_, _) => row.Owner.ValidateReading(cell);
+            tb.ContextMenu = new ContextMenu { Items = { item } };
+        }));
         box.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler((s, e) =>
         {
             if (e.Key != Key.Enter || s is not TextBox tb) return;

@@ -106,6 +106,31 @@ public class CoreTests
     }
 
     [Fact]
+    public void Aberrant_value_notification_opens_its_view_at_the_reading_date()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            var f = new DbContextFactory(path);
+            f.EnsureDatabaseUpToDate("test");
+            using var db = f.Create();
+            var view = new ReadingView { Nom = "Chaufferie", Recurrence = Recurrence.Mensuel };
+            var meter = new Meter { Nom = "Eau", Unite = "m³" };
+            db.ReadingViews.Add(view); db.Meters.Add(meter); db.SaveChanges();
+            db.ViewLines.Add(new ViewLine { ReadingViewId = view.Id, MeterId = meter.Id, Recurrence = Recurrence.Mensuel, CreatedOn = new DateTime(2026, 1, 1) });
+            db.MeterReadings.Add(new MeterReading { MeterId = meter.Id, Date = new DateTime(2026, 11, 2), Value = 9999, Forced = true, Anomaly = "au-dessus du seuil" });
+            db.SaveChanges();
+            var n = NotificationService.Build(db, new DateTime(2026, 11, 10)).Single(x => x.Level == NotificationLevel.Anomaly);
+            Assert.Contains("aberrante", n.Title);
+            Assert.Equal(view.Id, n.ViewId);
+            Assert.Equal(new DateTime(2026, 11, 2), n.Date);
+            var r = db.MeterReadings.Single(); r.Forced = false; db.SaveChanges(); // validée : plus de notification
+            Assert.DoesNotContain(NotificationService.Build(db, new DateTime(2026, 11, 10)), x => x.Level == NotificationLevel.Anomaly);
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); try { File.Delete(path); } catch { } }
+    }
+
+    [Fact]
     public void Period_start_month_shifts_quarter_semester_year()
     {
         // trimestre commençant en février : fév-avr, mai-juil, août-oct, nov-janv

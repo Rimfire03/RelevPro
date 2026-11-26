@@ -139,7 +139,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public void ShowNotifications() => SelectedItem = NotificationsItem;
 
     /// <summary>Alertes au format du centre de notifications commun (TomLine.Notifications) : seules les saisies en retard
-    /// comptent dans la cloche ; les saisies à faire et les valeurs forcées sont des informations.</summary>
+    /// comptent dans la cloche ; les saisies à faire sont des informations et les valeurs aberrantes des avertissements.</summary>
     private IReadOnlyList<TomLine.Notifications.AppNotification> CenterNotifications()
     {
         var items = NotificationService.Build(App.Db, DateTime.Today).Select(n => new TomLine.Notifications.AppNotification(
@@ -147,20 +147,27 @@ public partial class MainViewModel : ObservableObject, IDisposable
             n.Level switch { Core.Services.NotificationLevel.Late => TomLine.Notifications.NotificationLevel.Alert, Core.Services.NotificationLevel.Anomaly => TomLine.Notifications.NotificationLevel.Warning, _ => TomLine.Notifications.NotificationLevel.Info },
             n.Title,
             n.ViewName.Length > 0 ? $"{n.ViewName} - {n.Detail}" : n.Detail,
-            n.ViewId != 0 ? "view:" + n.ViewId : "",
+            n.ViewId != 0 ? "view:" + n.ViewId + (n.Date is { } d ? ":" + d.ToString("yyyy-MM-dd") : "") : "",
             CountsInBadge: n.Level == Core.Services.NotificationLevel.Late));
         return TomLine.Notifications.NotificationCenter.Sort(items);
     }
 
     private void OpenFromNotification(string target)
     {
-        if (target.StartsWith("view:") && int.TryParse(target[5..], out var id)) OpenView(id);
+        if (!target.StartsWith("view:")) return;
+        var parts = target[5..].Split(':');
+        if (!int.TryParse(parts[0], out var id)) return;
+        DateTime? date = parts.Length > 1 && DateTime.TryParseExact(parts[1], "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var d) ? d : null;
+        OpenView(id, date);
     }
 
-    public void OpenView(int viewId)
+    /// <summary>Ouvre une vue ; avec <paramref name="date"/>, la saisie s'ouvre sur la période de cette date.</summary>
+    public void OpenView(int viewId, DateTime? date = null)
     {
         var item = ViewItems().FirstOrDefault(c => c.ViewId == viewId);
-        if (item is not null) SelectedItem = item;
+        if (item is null) return;
+        SelectedItem = item;
+        if (date is { } dt && CurrentViewModel is ViewModels.Releves.ReadingViewModel vm) vm.RefDate = dt;
     }
 
     partial void OnSelectedItemChanged(NavigationItem? value)

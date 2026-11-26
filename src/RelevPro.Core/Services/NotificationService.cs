@@ -6,10 +6,10 @@ namespace RelevPro.Core.Services;
 
 public enum NotificationLevel { Late = 0, Anomaly = 1, Pending = 2 }
 
-public sealed record AppNotification(NotificationLevel Level, string ViewName, string Title, string Detail, int ViewId);
+public sealed record AppNotification(NotificationLevel Level, string ViewName, string Title, string Detail, int ViewId, DateTime? Date = null);
 
 /// <summary>Centre de notifications : saisies en retard (période précédente non faite), saisies à faire sur la période en
-/// cours, et relevés forcés malgré une alerte au cours des 30 derniers jours.</summary>
+/// cours, et valeurs aberrantes (relevés forcés malgré une alerte, non validés) des 30 derniers jours.</summary>
 public static class NotificationService
 {
     public const int AnomalyDays = 30;
@@ -69,8 +69,12 @@ public static class NotificationService
         var forced = db.MeterReadings.AsNoTracking().Include(r => r.Meter)
             .Where(r => r.Forced && r.Date >= since).OrderByDescending(r => r.Date).ToList();
         foreach (var r in forced)
-            list.Add(new AppNotification(NotificationLevel.Anomaly, "", $"Valeur forcée : {r.Meter?.Nom} = {r.Value:0.##} {r.Meter?.Unite}",
-                $"{r.Date:dd/MM/yyyy} - {r.Anomaly}", 0));
+        {
+            // clic sur la notification : la vue du compteur, positionnée sur la date du relevé, pour contrôler / corriger / valider
+            var line = lines.FirstOrDefault(l => l.MeterId == r.MeterId && l.ReadingView is not null);
+            list.Add(new AppNotification(NotificationLevel.Anomaly, line?.ReadingView?.Nom ?? "", $"Valeur aberrante à contrôler : {r.Meter?.Nom} = {r.Value:0.##} {r.Meter?.Unite}".TrimEnd(),
+                $"{r.Date:dd/MM/yyyy} - {r.Anomaly} (clic droit sur la case pour la valider)", line?.ReadingViewId ?? 0, r.Date));
+        }
 
         return list.OrderBy(n => n.Level).ToList();
     }
