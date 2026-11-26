@@ -11,6 +11,10 @@ public static class ReadingValidator
     /// <summary>Nombre d'intervalles précédents utilisés pour la moyenne.</summary>
     public const int HistorySize = 12;
 
+    /// <summary>Augmentation minimale (en unités du compteur) pour qu'un écart avec le rythme habituel soit signalé : sur un compteur
+    /// très peu consommateur, quelques unités de plus ne sont pas une anomalie.</summary>
+    public const decimal MinGap = 10m;
+
     /// <summary>Recontrôle les relevés forcés (valeurs aberrantes) : ceux qui ne présentent plus d'anomalie (valeur voisine corrigée,
     /// seuil modifié...) redeviennent normaux ; les autres voient leur message mis à jour. Retourne le nombre de relevés modifiés.</summary>
     public static int RecheckForced(RelevDbContext db, IReadOnlyCollection<int>? meterIds = null)
@@ -61,14 +65,14 @@ public static class ReadingValidator
         }
         var daysSincePrev = prev is null ? 1 : Math.Max(1, (date.Date - prev.Date).Days);
         // seuil d'alarme fixe : ne sonne que si l'augmentation dépasse aussi le rythme habituel (quand l'historique permet de le calculer)
-        if (prev is not null && meter.SeuilHaut > 0 && v - prev.Value > meter.SeuilHaut && (limit is null || (v - prev.Value) / daysSincePrev > limit))
+        if (prev is not null && meter.SeuilHaut > 0 && v - prev.Value > meter.SeuilHaut && (limit is null || ((v - prev.Value) / daysSincePrev > limit && v - prev.Value >= MinGap)))
             anomalies.Add($"Augmentation au-dessus du seuil d'alarme : {Fmt(v - prev.Value)} > {Fmt(meter.SeuilHaut)} {meter.Unite} depuis le {prev.Date:dd/MM/yyyy}.");
         if (prev is not null && v < prev.Value)
             anomalies.Add($"Le compteur diminue : {Fmt(value)} < {Fmt(prev.Value)} (relevé du {prev.Date:dd/MM/yyyy}).");
         if (next is not null && value > next.Value)
             anomalies.Add($"Valeur supérieure au relevé suivant : {Fmt(value)} > {Fmt(next.Value)} (relevé du {next.Date:dd/MM/yyyy}).");
 
-        if (prev is not null && limit is { } lim && (v - prev.Value) / daysSincePrev > lim)
+        if (prev is not null && limit is { } lim && (v - prev.Value) / daysSincePrev > lim && v - prev.Value >= MinGap)
         {
             var avg = AverageDailyRate(list.Where(r => r.Date <= prev.Date).ToList())!.Value;
             anomalies.Add($"Écart trop grand : {Fmt(v - prev.Value)} {meter.Unite} en {daysSincePrev} j " +
