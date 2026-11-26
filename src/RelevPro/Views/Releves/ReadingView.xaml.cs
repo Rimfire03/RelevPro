@@ -22,6 +22,31 @@ public partial class ReadingView : UserControl
             if (e.OldValue is ReadingViewModel o) { o.ColumnsChanged -= RebuildColumns; }
             if (e.NewValue is ReadingViewModel n) { n.ColumnsChanged += RebuildColumns; RebuildColumns(); }
         };
+        SaisieGrid.PreviewMouseRightButtonUp += OnHeaderRightClick;
+    }
+
+    /// <summary>En-têtes (titres) des colonnes masquées par l'utilisateur, conservés quand les colonnes de période sont recréées.</summary>
+    private readonly HashSet<string> _hidden = new();
+
+    /// <summary>Clic droit sur le bandeau des titres : liste cochable des colonnes à afficher ou masquer.</summary>
+    private void OnHeaderRightClick(object sender, MouseButtonEventArgs e)
+    {
+        if ((e.OriginalSource as DependencyObject)?.FindAncestor<System.Windows.Controls.Primitives.DataGridColumnHeader>() is null) return;
+        var menu = new ContextMenu();
+        foreach (var col in SaisieGrid.Columns)
+        {
+            var c = col; var name = c.Header?.ToString() ?? "";
+            var item = new MenuItem { Header = name, IsCheckable = true, IsChecked = c.Visibility == Visibility.Visible, StaysOpenOnClick = true };
+            item.Click += (_, _) =>
+            {
+                if (!item.IsChecked && SaisieGrid.Columns.Count(x => x.Visibility == Visibility.Visible) <= 1) { item.IsChecked = true; return; } // garde au moins une colonne
+                c.Visibility = item.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+                if (item.IsChecked) _hidden.Remove(name); else _hidden.Add(name);
+            };
+            menu.Items.Add(item);
+        }
+        menu.PlacementTarget = SaisieGrid; menu.IsOpen = true;
+        e.Handled = true;
     }
 
     private void RebuildColumns()
@@ -32,6 +57,7 @@ public partial class ReadingView : UserControl
         for (var i = 0; i < vm.ColumnHeaders.Count; i++)
         {
             var col = new DataGridTemplateColumn { Header = vm.ColumnHeaders[i], Width = 100, CellTemplate = CellTemplate(i) };
+            if (_hidden.Contains(vm.ColumnHeaders[i])) col.Visibility = Visibility.Collapsed;
             SaisieGrid.Columns.Insert(FirstDynamicIndex + i, col);
             _dynamic.Add(col);
         }
