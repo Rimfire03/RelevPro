@@ -428,13 +428,14 @@ public partial class ReadingViewModel : EditableScreenViewModel
         var forced = false;
         if (anomalies.Count > 0)
         {
-            if (!App.Dialogs.ShowConfirm($"Anomalie de saisie - {meter.Nom}",
-                    string.Join("\n", anomalies) + "\n\nForcer cette valeur ? (Non = corriger la saisie)"))
+            var choice = App.Dialogs.ShowChoice($"Anomalie de saisie - {meter.Nom}", string.Join("\n", anomalies),
+                "Valider la valeur (forcer, la marquer normale)", "Forcer la valeur (à contrôler plus tard)", "Corriger la saisie");
+            if (choice is not (0 or 1))
             {
                 ReloadLines();
                 return;
             }
-            forced = true;
+            forced = choice == 1; // 0 : acceptée comme normale, ni colorée ni notifiée
         }
 
         if (existing is null)
