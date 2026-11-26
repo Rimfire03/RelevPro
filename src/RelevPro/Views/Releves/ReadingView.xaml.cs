@@ -20,13 +20,22 @@ public partial class ReadingView : UserControl
         DataContextChanged += (_, e) =>
         {
             if (e.OldValue is ReadingViewModel o) { o.ColumnsChanged -= RebuildColumns; }
-            if (e.NewValue is ReadingViewModel n) { n.ColumnsChanged += RebuildColumns; RebuildColumns(); }
+            if (e.NewValue is ReadingViewModel n) { n.ColumnsChanged += RebuildColumns; LoadHidden(n.ViewId); RebuildColumns(); }
         };
         SaisieGrid.PreviewMouseRightButtonUp += OnHeaderRightClick;
     }
 
     /// <summary>En-têtes (titres) des colonnes masquées par l'utilisateur, conservés quand les colonnes de période sont recréées.</summary>
     private readonly HashSet<string> _hidden = new();
+
+    /// <summary>Colonnes fixes masquées lors d'une session précédente (mémorisées par utilisateur).</summary>
+    private void LoadHidden(int viewId)
+    {
+        _hidden.Clear();
+        foreach (var n in ColumnPrefs.Hidden(viewId)) _hidden.Add(n);
+        foreach (var c in SaisieGrid.Columns.Where(c => !_dynamic.Contains(c)))
+            c.Visibility = _hidden.Contains(c.Header?.ToString() ?? "") ? Visibility.Collapsed : Visibility.Visible;
+    }
 
     /// <summary>Clic droit sur le bandeau des titres : liste cochable des colonnes à afficher ou masquer.</summary>
     private void OnHeaderRightClick(object sender, MouseButtonEventArgs e)
@@ -42,6 +51,8 @@ public partial class ReadingView : UserControl
                 if (!item.IsChecked && SaisieGrid.Columns.Count(x => x.Visibility == Visibility.Visible) <= 1) { item.IsChecked = true; return; } // garde au moins une colonne
                 c.Visibility = item.IsChecked ? Visibility.Visible : Visibility.Collapsed;
                 if (item.IsChecked) _hidden.Remove(name); else _hidden.Add(name);
+                if (DataContext is ReadingViewModel vm && !_dynamic.Contains(c)) // seules les colonnes fixes sont mémorisées (les semaines changent)
+                    ColumnPrefs.Save(vm.ViewId, SaisieGrid.Columns.Where(x => !_dynamic.Contains(x) && x.Visibility != Visibility.Visible).Select(x => x.Header?.ToString() ?? ""));
             };
             menu.Items.Add(item);
         }

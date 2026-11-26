@@ -100,6 +100,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
 
     private readonly MainViewModel _main;
     private readonly int _viewId;
+    public int ViewId => _viewId;
     private Recurrence _rec = Recurrence.Hebdo;
     internal bool Loaded;
 
