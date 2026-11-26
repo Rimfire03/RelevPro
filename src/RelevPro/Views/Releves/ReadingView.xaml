@@ -17,6 +17,7 @@
                         <Button Content="▶" Style="{StaticResource SecondaryButton}" Command="{Binding NextPeriodCommand}" Margin="6,0,12,0" Padding="10,3"/>
                         <DatePicker SelectedDate="{Binding RefDate}" Width="130" Margin="0,0,8,0"/>
                         <Button Content="Aujourd'hui" Style="{StaticResource SecondaryButton}" Command="{Binding TodayCommand}" Margin="0,0,24,0"/>
+                        <Button Content="Imprimer" Style="{StaticResource SecondaryButton}" Command="{Binding PrintSheetCommand}" Margin="0,0,8,0"/>
                         <Button Content="+ Compteur" Style="{StaticResource PrimaryButton}" Command="{Binding AddMeterLineCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="+ Tâche" Style="{StaticResource PrimaryButton}" Command="{Binding AddTaskLineCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="Modifier la ligne" Style="{StaticResource SecondaryButton}" Command="{Binding EditSelectedCommand}" Margin="0,0,8,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>

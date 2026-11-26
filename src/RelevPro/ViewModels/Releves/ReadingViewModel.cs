@@ -474,6 +474,8 @@ public partial class ReadingViewModel : EditableScreenViewModel
 
     // ---- Navigation ----
 
+    /// <summary>Imprime la période affichée avec des cases vides à remplir à la main (paysage pour une vue hebdomadaire, sinon portrait).</summary>
+    [RelayCommand] private void PrintSheet() => Services.SheetPrinter.Print(ViewName, PeriodTitle, ColumnHeaders, Lines.ToList(), _rec == Recurrence.Hebdo);
     [RelayCommand] private void Today() => RefDate = DateTime.Today;
     [RelayCommand] private void PreviousPeriod() { var w = Periods.Window(_rec); RefDate = Periods.Previous(w, Periods.Start(w, RefDate)); }
     [RelayCommand] private void NextPeriod() { var w = Periods.Window(_rec); RefDate = Periods.Next(w, Periods.Start(w, RefDate)); }
