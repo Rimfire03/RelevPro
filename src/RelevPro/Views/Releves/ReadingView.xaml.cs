@@ -138,7 +138,13 @@ public partial class ReadingView : UserControl
         grid.AppendChild(box);
 
         var check = new FrameworkElementFactory(typeof(CheckBox));
-        check.SetBinding(System.Windows.Controls.Primitives.ToggleButton.IsCheckedProperty, new Binding($"Cells[{i}].IsDone") { Mode = BindingMode.TwoWay });
+        // OneWay + Click : un binding TwoWay dans une ligne de DataGrid est retenu par le BindingGroup de la ligne (jamais écrit tant que la
+        // ligne n'est pas validée) : la case semblait cochée mais n'était pas enregistrée, puis se décochait au rechargement.
+        check.SetBinding(System.Windows.Controls.Primitives.ToggleButton.IsCheckedProperty, new Binding($"Cells[{i}].IsDone") { Mode = BindingMode.OneWay });
+        check.AddHandler(System.Windows.Controls.Primitives.ButtonBase.ClickEvent, new RoutedEventHandler((s, e) =>
+        {
+            if (s is CheckBox cb && cb.DataContext is LineRow row && i < row.Cells.Count) row.Cells[i].IsDone = cb.IsChecked == true;
+        }));
         check.SetBinding(UIElement.VisibilityProperty, new Binding($"Cells[{i}].CheckVisibility"));
         check.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
         check.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
