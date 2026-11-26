@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using RelevPro.Core.Data;
 using RelevPro.Core.Models;
 
 namespace RelevPro.Core.Services;
@@ -8,6 +10,29 @@ public static class ReadingValidator
 {
     /// <summary>Nombre d'intervalles précédents utilisés pour la moyenne.</summary>
     public const int HistorySize = 6;
+
+    /// <summary>Recontrôle les relevés forcés (valeurs aberrantes) : ceux qui ne présentent plus d'anomalie (valeur voisine corrigée,
+    /// seuil modifié...) redeviennent normaux ; les autres voient leur message mis à jour. Retourne le nombre de relevés modifiés.</summary>
+    public static int RecheckForced(RelevDbContext db, IReadOnlyCollection<int>? meterIds = null)
+    {
+        var forced = db.MeterReadings.Where(r => r.Forced && (meterIds == null || meterIds.Contains(r.MeterId))).ToList();
+        if (forced.Count == 0) return 0;
+        var ids = forced.Select(r => r.MeterId).Distinct().ToList();
+        var meters = db.Meters.Where(m => ids.Contains(m.Id)).ToDictionary(m => m.Id);
+        var all = db.MeterReadings.AsNoTracking().Where(r => ids.Contains(r.MeterId)).ToList().ToLookup(r => r.MeterId);
+        var changed = 0;
+        foreach (var r in forced)
+        {
+            if (!meters.TryGetValue(r.MeterId, out var m)) continue;
+            var others = all[r.MeterId].Where(x => x.Id != r.Id).ToList();
+            var cap = r.Tour ? ConsumptionService.Capacity(m, all[r.MeterId].ToList()) : 0;
+            var anomalies = Check(m, r.Date, r.Value, others, cap, r.Remplacement);
+            if (anomalies.Count == 0) { r.Forced = false; r.Anomaly = string.Empty; changed++; }
+            else { var text = string.Join(" ", anomalies); if (r.Anomaly != text) { r.Anomaly = text; changed++; } }
+        }
+        if (changed > 0) db.SaveChanges();
+        return changed;
+    }
 
     /// <summary>Retourne les anomalies (vide = valeur acceptée). <paramref name="others"/> : relevés existants du
     /// compteur, hors celui qui est modifié.</summary>

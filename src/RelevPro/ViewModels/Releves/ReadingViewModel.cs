@@ -222,6 +222,9 @@ public partial class ReadingViewModel : EditableScreenViewModel
     private void ReloadLines()
     {
         Loaded = false;
+        // valeurs aberrantes devenues normales (valeur voisine corrigée...) : plus colorées ni notifiées
+        var viewMeters = App.Db.ViewLines.AsNoTracking().Where(l => l.ReadingViewId == _viewId && l.MeterId != null).Select(l => l.MeterId!.Value).Distinct().ToList();
+        if (ReadingValidator.RecheckForced(App.Db, viewMeters) > 0) _main?.RefreshNotificationBadge();
         Lines.Clear();
         var today = DateTime.Today;
         var cols = Periods.Columns(_rec, RefDate);

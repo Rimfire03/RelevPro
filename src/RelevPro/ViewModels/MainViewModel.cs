@@ -142,6 +142,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// comptent dans la cloche ; les saisies à faire sont des informations et les valeurs aberrantes des avertissements.</summary>
     private IReadOnlyList<TomLine.Notifications.AppNotification> CenterNotifications()
     {
+        try { ReadingValidator.RecheckForced(App.Db); } catch { /* base verrouillée : on affiche l'état enregistré */ }
         var items = NotificationService.Build(App.Db, DateTime.Today).Select(n => new TomLine.Notifications.AppNotification(
             $"{n.Level}:{n.ViewId}:{n.Title}",
             n.Level switch { Core.Services.NotificationLevel.Late => TomLine.Notifications.NotificationLevel.Alert, Core.Services.NotificationLevel.Anomaly => TomLine.Notifications.NotificationLevel.Warning, _ => TomLine.Notifications.NotificationLevel.Info },

@@ -131,6 +131,29 @@ public class CoreTests
     }
 
     [Fact]
+    public void Recheck_clears_forced_reading_once_neighbour_is_corrected()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            var f = new DbContextFactory(path);
+            f.EnsureDatabaseUpToDate("test");
+            using var db = f.Create();
+            var meter = new Meter { Nom = "Eau" };
+            db.Meters.Add(meter); db.SaveChanges();
+            db.MeterReadings.Add(new MeterReading { MeterId = meter.Id, Date = new DateTime(2026, 1, 5), Value = 500 }); // erreur de saisie
+            var second = new MeterReading { MeterId = meter.Id, Date = new DateTime(2026, 1, 12), Value = 110, Forced = true, Anomaly = "Index en baisse" };
+            db.MeterReadings.Add(second); db.SaveChanges();
+            Assert.Equal(1, ReadingValidator.RecheckForced(db));            // toujours en baisse : message conservé
+            Assert.True(db.MeterReadings.Single(r => r.Id == second.Id).Forced);
+            var first = db.MeterReadings.Single(r => r.Date == new DateTime(2026, 1, 5)); first.Value = 100; db.SaveChanges(); // voisin corrigé
+            Assert.Equal(1, ReadingValidator.RecheckForced(db));
+            Assert.False(db.MeterReadings.Single(r => r.Id == second.Id).Forced);
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); try { File.Delete(path); } catch { } }
+    }
+
+    [Fact]
     public void Period_start_month_shifts_quarter_semester_year()
     {
         // trimestre commençant en février : fév-avr, mai-juil, août-oct, nov-janv
