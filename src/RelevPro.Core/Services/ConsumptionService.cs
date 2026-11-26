@@ -87,4 +87,84 @@ public static class ConsumptionService
             return new Row(m.Nom, m.Unite, values, sum);
         }).ToList();
     }
+
+    /// <summary>Colonnes du tableau de statistiques (sans point dans les noms : la grille n'affiche pas ces colonnes).</summary>
+    public static readonly string[] StatColumns =
+    {
+        "Ligne", "Type", "Unité", "Relevés", "Dernier relevé", "Dernière valeur", "Consommation", "Moyenne par mois",
+        "Mois max", "Mois min", "Écart N-1", "Valeur min", "Valeur max", "Valeur moyenne", "Valeurs forcées", "Réalisation"
+    };
+
+    /// <summary>Statistiques de l'année pour chaque ligne de la vue (compteurs cumulatifs : consommation, moyenne, mois extrêmes,
+    /// écart avec l'an passé sur la même période ; mesures : min, max, moyenne ; tâches : taux de réalisation des périodes échues).
+    /// Une ligne = un tableau d'objets dans l'ordre de <see cref="StatColumns"/>.</summary>
+    public static List<object?[]> Stats(RelevDbContext db, int viewId, int year, DateTime today)
+    {
+        var fr = System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
+        var view = db.ReadingViews.AsNoTracking().FirstOrDefault(v => v.Id == viewId);
+        var viewRec = view?.Recurrence ?? Recurrence.Hebdo;
+        var lines = db.ViewLines.AsNoTracking().Include(l => l.Meter).Where(l => l.ReadingViewId == viewId).OrderBy(l => l.Ordre).ThenBy(l => l.Id).ToList();
+        var ids = lines.Where(l => l.MeterId != null).Select(l => l.MeterId!.Value).Distinct().ToList();
+        var readings = db.MeterReadings.AsNoTracking().Where(r => ids.Contains(r.MeterId)).OrderBy(r => r.Date).ThenBy(r => r.Id).ToList().ToLookup(r => r.MeterId);
+        var lineIds = lines.Select(l => l.Id).ToList();
+        var done = db.TaskCompletions.AsNoTracking().Where(t => lineIds.Contains(t.ViewLineId)).Select(t => new { t.ViewLineId, t.PeriodStart }).ToList()
+            .Select(t => (t.ViewLineId, t.PeriodStart.Date)).ToHashSet();
+
+        var yStart = new DateTime(year, 1, 1);
+        var yEnd = yStart.AddYears(1);
+        var curEnd = year == today.Year ? today.Date.AddDays(1) : yEnd; // année en cours : jusqu'à aujourd'hui
+        var rows = new List<object?[]>();
+        foreach (var l in lines)
+        {
+            if (l.Meter?.Arrete == true) continue;
+            if (l.Kind == LineKind.Tache)
+            {
+                var r = l.Recurrence < viewRec ? viewRec : l.Recurrence;
+                var mp = l.MoisPeriode(viewRec);
+                int expected = 0, ok = 0;
+                for (var p = Periods.Start(r, new[] { l.CreatedOn.Date, yStart }.Max(), mp); p < yEnd; p = Periods.Next(r, p))
+                {
+                    if (p < yStart) continue;
+                    if (Periods.Next(r, p) > today.Date) break; // période pas encore échue
+                    expected++;
+                    if (done.Contains((l.Id, p))) ok++;
+                }
+                var t = new object?[StatColumns.Length];
+                t[0] = l.Titre; t[1] = "Tâche";
+                t[15] = expected == 0 ? "" : $"{ok}/{expected} ({100m * ok / expected:0} %)";
+                rows.Add(t);
+                continue;
+            }
+            var m = l.Meter!;
+            var all = readings[m.Id].ToList();
+            var inYear = all.Where(x => x.Date >= yStart && x.Date < yEnd).ToList();
+            var last = inYear.LastOrDefault();
+            var row = new object?[StatColumns.Length];
+            row[0] = l.Titre; row[1] = m.Cumulatif ? "Compteur" : "Mesure"; row[2] = m.Unite;
+            row[3] = inYear.Count; row[4] = last is null ? null : last.Date.ToString("dd/MM/yyyy"); row[5] = last?.Value;
+            row[14] = inYear.Count(x => x.Forced);
+            if (m.Cumulatif)
+            {
+                var cap = Capacity(m, all);
+                row[6] = Consumption(all, yStart, curEnd, cap);
+                var months = Enumerable.Range(1, 12).Select(i => (Month: i, Value: Consumption(all, new DateTime(year, i, 1), new DateTime(year, i, 1).AddMonths(1), cap)))
+                    .Where(x => x.Value is not null).ToList();
+                if (months.Count > 0)
+                {
+                    row[7] = months.Average(x => x.Value!.Value);
+                    var hi = months.MaxBy(x => x.Value)!; var lo = months.MinBy(x => x.Value)!;
+                    row[8] = $"{fr.DateTimeFormat.GetMonthName(hi.Month)} ({hi.Value:#,0.##})";
+                    row[9] = $"{fr.DateTimeFormat.GetMonthName(lo.Month)} ({lo.Value:#,0.##})";
+                }
+                var prev = Consumption(all, yStart.AddYears(-1), curEnd.AddYears(-1), cap);
+                if (row[6] is decimal cur && prev is > 0) row[10] = $"{(cur - prev.Value) / prev.Value * 100m:+0;-0;0} %";
+            }
+            else if (inYear.Count > 0)
+            {
+                row[11] = inYear.Min(x => x.Value); row[12] = inYear.Max(x => x.Value); row[13] = inYear.Average(x => x.Value);
+            }
+            rows.Add(row);
+        }
+        return rows;
+    }
 }

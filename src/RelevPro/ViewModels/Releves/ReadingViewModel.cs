@@ -117,6 +117,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
     [ObservableProperty] private int _selectedYear = DateTime.Today.Year;
     [ObservableProperty] private DataView? _monthlyTable;
     [ObservableProperty] private DataView? _yearlyTable;
+    [ObservableProperty] private DataView? _statsTable;
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty] private string _periodTitle = string.Empty;
     [ObservableProperty] private string _consumptionHeader = "Consommation";
@@ -137,7 +138,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
     }
 
     partial void OnRefDateChanged(DateTime value) => ReloadLines();
-    partial void OnSelectedYearChanged(int value) => ReloadMonthly();
+    partial void OnSelectedYearChanged(int value) { ReloadMonthly(); ReloadStats(); }
 
     private static Brush Freeze(string hex)
     {
@@ -155,6 +156,7 @@ public partial class ReadingViewModel : EditableScreenViewModel
         ReloadLines();
         ReloadMonthly();
         ReloadYearly();
+        ReloadStats();
     }
 
     private Recurrence LineRec(ViewLine l) => l.Recurrence < _rec ? _rec : l.Recurrence;
@@ -278,6 +280,9 @@ public partial class ReadingViewModel : EditableScreenViewModel
         cols.AddRange(years.Select(y => y.ToString()));
         YearlyTable = Table(cols, rows.Select(r => new object?[] { r.Compteur, r.Unite }.Concat(r.Values.Cast<object?>()).ToArray()));
     }
+
+    private void ReloadStats() =>
+        StatsTable = Table(ConsumptionService.StatColumns.ToList(), ConsumptionService.Stats(App.Db, _viewId, SelectedYear, DateTime.Today));
 
     private static DataView Table(List<string> cols, IEnumerable<object?[]> rows)
     {

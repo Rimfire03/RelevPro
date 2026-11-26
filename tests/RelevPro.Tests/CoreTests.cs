@@ -69,6 +69,42 @@ public class CoreTests
     }
 
     [Fact]
+    public void Stats_per_view_cover_meters_and_tasks()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"relevpro-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            var f = new DbContextFactory(path);
+            f.EnsureDatabaseUpToDate("test");
+            using var db = f.Create();
+            var view = new ReadingView { Nom = "V", Recurrence = Recurrence.Mensuel };
+            var cum = new Meter { Nom = "Eau", Unite = "m³" };
+            var mes = new Meter { Nom = "Temp", Cumulatif = false };
+            db.ReadingViews.Add(view); db.Meters.AddRange(cum, mes); db.SaveChanges();
+            db.ViewLines.AddRange(
+                new ViewLine { ReadingViewId = view.Id, MeterId = cum.Id, Recurrence = Recurrence.Mensuel, CreatedOn = new DateTime(2026, 1, 1) },
+                new ViewLine { ReadingViewId = view.Id, MeterId = mes.Id, Recurrence = Recurrence.Mensuel, CreatedOn = new DateTime(2026, 1, 1) },
+                new ViewLine { ReadingViewId = view.Id, Kind = LineKind.Tache, Libelle = "Purge", Recurrence = Recurrence.Mensuel, CreatedOn = new DateTime(2026, 1, 1) });
+            foreach (var (d, v) in new[] { ("2026-01-05", 100m), ("2026-02-02", 150m), ("2026-03-02", 170m), ("2026-04-01", 200m) })
+                db.MeterReadings.Add(new MeterReading { MeterId = cum.Id, Date = DateTime.Parse(d), Value = v });
+            db.MeterReadings.Add(new MeterReading { MeterId = mes.Id, Date = new DateTime(2026, 2, 2), Value = 10 });
+            db.MeterReadings.Add(new MeterReading { MeterId = mes.Id, Date = new DateTime(2026, 3, 2), Value = 20 });
+            db.SaveChanges();
+            var line = db.ViewLines.First(l => l.Kind == LineKind.Tache);
+            db.TaskCompletions.Add(new TaskCompletion { ViewLineId = line.Id, PeriodStart = new DateTime(2026, 1, 1), CompletedAt = DateTime.Now, CompletedBy = "t" });
+            db.SaveChanges();
+
+            var rows = ConsumptionService.Stats(db, view.Id, 2026, new DateTime(2026, 4, 15));
+            Assert.Equal(3, rows.Count);
+            Assert.Equal(100m, rows[0][6]);          // 200 - 100 de janvier à avril
+            Assert.Equal(4, rows[0][3]);
+            Assert.Equal(10m, rows[1][11]); Assert.Equal(20m, rows[1][12]); Assert.Equal(15m, rows[1][13]);
+            Assert.Equal("1/3 (33 %)", rows[2][15]); // janv., févr., mars échus
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); try { File.Delete(path); } catch { } }
+    }
+
+    [Fact]
     public void Period_start_month_shifts_quarter_semester_year()
     {
         // trimestre commençant en février : fév-avr, mai-juil, août-oct, nov-janv
